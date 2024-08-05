@@ -25,7 +25,7 @@ def build_h2(kx, ky):
     h2 = np.matrix([[h11, h12], [np.conjugate(h12), -h11]])
     return h2
 
-# eigen states (projected on the lower energies) tensor (state index, A/B lattice, real space x, real space y)
+# eigen states (projected on the lower energies) tensor (state index, A/B lattice, real space position x, real space position y)
 eigen_states = np.zeros((Nx * Ny,2, Nx, Ny)) * 1j
 
 state_index = 0
