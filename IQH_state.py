@@ -1,7 +1,7 @@
 #%% 
 import numpy as np
 import matplotlib.pyplot as plt
-from itertools import permutations
+from itertools import permutations, combinations
 
 
 
@@ -32,10 +32,8 @@ def multi_particle_state(N, n):
     # perms = [np.array(p) for p in perms]
     index = range(len(perms))
     perm_2_index_dict =  {k: o for k, o in zip(perms, index)}
-    multi_particle_state_vector = np.zeros((len(perms)))
+    multi_particle_state_vector = np.zeros((len(perms))) * 1j
     return multi_particle_state_vector, perm_2_index_dict
-
-multi_particle_state(5,3)
 
 # # Convert to a NumPy array
 # perms_array = np.array(perms)
@@ -58,8 +56,9 @@ multi_particle_state(5,3)
 #%% single electron Hamiltonian
 
 # parametrs of the model
-Nx = 3
-Ny = 6
+Nx = 2
+Ny = 2
+N = Nx * Ny
 M = 0
 phi = np.pi/4
 t1 = 1
@@ -78,7 +77,7 @@ def build_h2(kx, ky):
     return h2
 
 # eigen states (projected on the lower energies) tensor (state index, A/B lattice, real space position x, real space position y)
-eigen_states = np.zeros((Nx * Ny,2, Nx, Ny)) * 1j
+eigen_states = np.zeros((N,2, Nx, Ny)) * 1j
 
 state_index = 0
 for kx in Kx:
@@ -96,4 +95,28 @@ for kx in Kx:
         state_index += 1
     
 # reshaping each state to one long vector
-eigen_states = np.reshape(eigen_states,(Nx * Ny, 2 * Nx * Ny))
+eigen_states = np.reshape(eigen_states,(N, 2 * N))
+
+#%%
+# creating the multi particle integer quantum hall state with 2 * N sites and N electron (half filled)
+sites = np.arange(2 * N)
+
+# Generate all ordered permutations of length n
+perms_array = np.array(list(permutations(sites, N)))
+# print(perms_array)
+
+multi_particle_state_vector, perm_2_index_dict = multi_particle_state(2 * N, N)
+
+for perm in perms_array:
+    state_coeff = 1
+    for electron_index in range(N):
+        state_coeff *= eigen_states[electron_index, perm[electron_index]]
+    
+    parity, soreted_perm = permutation_parity(perm = perm, return_sorted_array = True)
+    state_coeff *= (-1)**parity
+    multi_particle_state_index = perm_2_index_dict[tuple(soreted_perm)]
+    multi_particle_state_vector[multi_particle_state_index] = state_coeff
+
+
+
+print(multi_particle_state_vector)
