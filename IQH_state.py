@@ -120,3 +120,9 @@ for perm in perms_array:
 
 multi_particle_state_vector = multi_particle_state_vector/np.linalg.norm(multi_particle_state_vector)
 print(multi_particle_state_vector)
+
+
+#%%
+# # TODO
+# 1. Write a non-interacting many body hamiltonian and check if multi_particle_state_vector is indeed eigen state with the proper energy
+# 2. Write a code that creat this state on Qiskit, first with trivial coding (all many body state of the hilbert space) then with constraied hilbert space
