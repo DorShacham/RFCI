@@ -118,5 +118,5 @@ for perm in perms_array:
     multi_particle_state_vector[multi_particle_state_index] = state_coeff
 
 
-
+multi_particle_state_vector = multi_particle_state_vector/np.linalg.norm(multi_particle_state_vector)
 print(multi_particle_state_vector)
