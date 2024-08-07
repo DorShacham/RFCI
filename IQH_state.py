@@ -1,6 +1,58 @@
 #%% 
 import numpy as np
 import matplotlib.pyplot as plt
+from itertools import permutations
+
+
+
+#%% Auxiliry
+
+# calculate the parity of a given permution @perm and reutrn the parity. 
+# @return_sorted_array if True, return the sorted permutaion.
+def permutation_parity(perm, return_sorted_array = False):
+    inversions = 0
+    perm = np.array(perm)
+    for i in range(len(perm)):
+        for j in range(i + 1, len(perm)):
+            if perm[i] > perm[j]:
+                inversions += 1
+                if return_sorted_array:
+                    perm[i], perm[j] = perm[j], perm[i]
+    if return_sorted_array:
+        return (inversions % 2), perm
+    else:
+        return (inversions % 2)
+
+
+# Create the multi particle state vector for @N sites and @n particles.
+# Reutrn a zero np.vecotr and a dictionary for translating permutation to the correct index in the vector
+def multi_particle_state(N, n):
+    objects = np.arange(N)
+    perms = list((combinations(objects, n)))
+    # perms = [np.array(p) for p in perms]
+    index = range(len(perms))
+    perm_2_index_dict =  {k: o for k, o in zip(perms, index)}
+    multi_particle_state_vector = np.zeros((len(perms)))
+    return multi_particle_state_vector, perm_2_index_dict
+
+multi_particle_state(5,3)
+
+# # Convert to a NumPy array
+# perms_array = np.array(perms)
+# # Define N and n
+# N = 5
+# n = 3
+
+# # Create a list of objects from 0 to N-1
+# objects = np.arange(N)
+
+# # Generate all ordered permutations of length n
+# perms = list(permutations(objects, n))
+
+# # Convert to a NumPy array
+# perms_array = np.array(perms)
+
+# print(perms_array)
 
 
 #%% single electron Hamiltonian
@@ -43,3 +95,5 @@ for kx in Kx:
 
         state_index += 1
     
+# reshaping each state to one long vector
+eigen_states = np.reshape(eigen_states,(Nx * Ny, 2 * Nx * Ny))
