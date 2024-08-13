@@ -2,6 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import permutations, combinations
+from scipy.linalg import block_diag,dft
 
 
 
@@ -56,8 +57,9 @@ def multi_particle_state(N, n):
 #%% single electron Hamiltonian
 
 # parametrs of the model
-Nx = 2
-Ny = 2
+Nx = 4
+Ny = 3
+
 N = Nx * Ny
 M = 0
 phi = np.pi/4
@@ -68,6 +70,8 @@ t2 = (2-np.sqrt(2))/2
 # need to check if the gauge transformation is needed to adress
 Kx = np.linspace(-np.pi,np.pi,num=Nx,endpoint=True)
 Ky = np.linspace(-np.pi,np.pi,num=Ny,endpoint=True)
+X = np.array(range(Nx)) 
+Y = np.array(range(Ny)) 
 
 # Kx, Ky = np.meshgrid(kx,ky)
 def build_h2(kx, ky):
@@ -77,25 +81,58 @@ def build_h2(kx, ky):
     return h2
 
 # eigen states (projected on the lower energies) tensor (state index, A/B lattice, real space position x, real space position y)
-eigen_states = np.zeros((N,2, Nx, Ny)) * 1j
+# eigen_states = np.zeros((N,2, Nx, Ny)) * 1j
 
+H_k_list = []
+H_real_space = np.zeros(shape = (2 * N, 2 * N), dtype = complex) 
 state_index = 0
 for kx in Kx:
     for ky in Ky:
         H_single_particle = build_h2(kx,ky)
         eig_val, eig_vec = np.linalg.eigh(H_single_particle)
 
-        k_space = np.zeros((Nx,Ny))
-        k_space[kx == Kx, ky == Ky] = 1
-        real_space = np.fft.fft2(k_space)
+        h_flat = H_single_particle / np.abs(eig_val[0])  # flat band limit
+        H_k_list.append(h_flat)
+        
+        # for x1 in X:
+        #     for x2 in X:
+        #         for y1 in Y:
+        #             for y2 in Y:
+        #                 R1_index = 2 * (Ny * x1 + y1)
+        #                 R2_index = 2 * (Ny * x2 + y2)
+        #                 H_real_space[R1_index : R1_index + 2, R2_index : R2_index + 2] += \
+        #                 np.eye(2) * np.exp(-1j * kx * (x1 - x2)) * np.exp(-1j * ky * (y1 - y2))
 
-        eigen_states[state_index, 0, :,:] = eig_vec[0,0] * real_space
-        eigen_states[state_index, 1, :,:] = eig_vec[1,0] * real_space
 
-        state_index += 1
+
+        # k_space = np.zeros((Nx,Ny))
+        # k_space[kx == Kx, ky == Ky] = 1
+        # real_space = np.fft.fft2(k_space)
+
+        # eigen_states[state_index, 0, :,:] = eig_vec[0,0] * real_space
+        # eigen_states[state_index, 1, :,:] = eig_vec[1,0] * real_space
+
+        # state_index += 1
     
 # reshaping each state to one long vector
-eigen_states = np.reshape(eigen_states,(N, 2 * N))
+# eigen_states = np.reshape(eigen_states,(N, 2 * N))
+
+# creaing a block diagonal H_k matrix and dft to real space
+
+H_k = block_diag(*H_k_list)
+dft_matrix = np.kron(dft(Nx),(np.kron(dft(Ny),np.eye(2)))) / np.sqrt(N)
+H_real_space =np.matmul(np.matmul(dft_matrix.conjugate(),H_k), dft_matrix)
+
+plt.matshow(np.abs(H_real_space))
+eig_val, eig_vec = np.linalg.eigh(H_real_space)
+# eigen states (projected on the lower energies) tensor (state index, real space position with A,B sublattices)
+eigen_states = eig_vec[:,:N].T
+print(eig_val)
+
+
+def normalize(vec):
+    return vec/np.linalg.norm(vec)
+
 
 #%%
 # creating the multi particle integer quantum hall state with 2 * N sites and N electron (half filled)
