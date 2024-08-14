@@ -25,33 +25,45 @@ def permutation_parity(perm, return_sorted_array = False):
         return (inversions % 2)
 
 
-# Create the multi particle state vector for @N sites and @n particles.
-# Reutrn a zero np.vecotr and a dictionary for translating permutation to the correct index in the vector
+# Create the multi particle state zero vector for @N sites and @n particles.
+# Reutrn a zero np.vecotr, a dictionary for translating permutation to the correct index in the vector and a list to translate index to permutation
 def multi_particle_state(N, n):
     objects = np.arange(N)
     perms = list((combinations(objects, n)))
+    index_2_perm_list = perms
     # perms = [np.array(p) for p in perms]
     index = range(len(perms))
     perm_2_index_dict =  {k: o for k, o in zip(perms, index)}
     multi_particle_state_vector = np.zeros((len(perms))) * 1j
-    return multi_particle_state_vector, perm_2_index_dict
+    return multi_particle_state_vector, perm_2_index_dict, index_2_perm_list
 
-# # Convert to a NumPy array
-# perms_array = np.array(perms)
-# # Define N and n
-# N = 5
-# n = 3
+# Creat a multi particle state from the given single particle state vectros
+# @state_array - np.array of the given states of shape (n,N) where n is the number of states (number of particles to be created)
+# and N is the number of sites in the system
+def create_multi_particle_state(state_array):
+    n,N = np.shape(state_array)
+    sites = np.arange(N)
 
-# # Create a list of objects from 0 to N-1
-# objects = np.arange(N)
+    # Generate all ordered permutations of length n
+    perms_array = np.array(list(permutations(sites, N)))
+    # print(perms_array)
 
-# # Generate all ordered permutations of length n
-# perms = list(permutations(objects, n))
+    multi_particle_state_vector, perm_2_index_dict, index_2_perm = multi_particle_state(N, n)
 
-# # Convert to a NumPy array
-# perms_array = np.array(perms)
+    for perm in perms_array:
+        state_coeff = 1
+        for electron_index in range(n):
+            state_coeff *= state_array[electron_index, perm[electron_index]]
+        
+        parity, soreted_perm = permutation_parity(perm = perm, return_sorted_array = True)
+        state_coeff *= (-1)**parity
+        multi_particle_state_index = perm_2_index_dict[tuple(soreted_perm)]
+        multi_particle_state_vector[multi_particle_state_index] = state_coeff
 
-# print(perms_array)
+
+    multi_particle_state_vector = multi_particle_state_vector/np.linalg.norm(multi_particle_state_vector)    
+    return multi_particle_state_vector
+
 
 
 #%% single electron Hamiltonian
@@ -112,6 +124,10 @@ eig_val, eig_vec = np.linalg.eigh(H_real_space)
 # for position x,y sublattice A the index is 2 * (Ny * x + y) + A
 eigen_states = eig_vec[:,:N].T
 
+# creating the multi particle integer quantum hall state with 2 * N sites and N electron (half filled)
+multi_particle_state_vector = create_multi_particle_state(eigen_states)
+
+print(multi_particle_state_vector)
 
 
 #%%
@@ -137,6 +153,7 @@ for perm in perms_array:
 
 multi_particle_state_vector = multi_particle_state_vector/np.linalg.norm(multi_particle_state_vector)
 print(multi_particle_state_vector)
+
 
 
 #%%
