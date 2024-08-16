@@ -8,6 +8,22 @@ from scipy.linalg import block_diag,dft
 
 #%% Auxiliry
 
+# Normalizes @vec
+def normalize(vec):
+    norm = np.linalg.norm(vec)
+    if norm == 0:
+        return vec
+    else:
+        return vec/norm
+
+def print_sb_state(state,Nx,Ny):
+    map = np.zeros((Ny, 2 * Nx), dtype = complex)
+    for x in range((Nx)):
+        for y in range(Ny):
+            map[y,2 * x] = state[2 * (Ny * x + y)]
+            map[y,2 * x + 1] = state[2 * (Ny * x + y) + 1]
+    plt.matshow(np.abs(map))
+
 # calculate the parity of a given permution @perm and reutrn the parity. 
 # @return_sorted_array if True, return the sorted permutaion.
 def permutation_parity(perm, return_sorted_array = False):
@@ -36,7 +52,7 @@ class Multi_particle_state:
         self.n = n
         self.perm_2_index_dict = perm_2_index_dict
         self.index_2_perm_list = index_2_perm_list
-
+        
 # Creats a vectors of zeros in the size of a multi particle state
     def zero_vector(self):
         multi_particle_state_vector = np.zeros((len(self.index_2_perm_list)), dtype = complex)
@@ -70,21 +86,34 @@ class Multi_particle_state:
             parity, soreted_perm = permutation_parity(perm = perm, return_sorted_array = True)
             state_coeff *= (-1)**parity
             multi_particle_state_index = self.perm_2_index(soreted_perm)
-            multi_particle_state_vector[multi_particle_state_index] = state_coeff
+            multi_particle_state_vector[multi_particle_state_index] += state_coeff
 
 
-        # normalize the state 
-        multi_particle_state_vector = multi_particle_state_vector/np.linalg.norm(multi_particle_state_vector)    
-        return multi_particle_state_vector
+        return normalize(multi_particle_state_vector)
 
+# Function that acts as a (non-interacting) many body Hamiltonian bases on a single body Hamiltonian @H_sb on state @multi_particle_state
+# The calculation is taking each unit vector in the multi-particle state, splitting it to single particle state calculating the action of
+# the single body hamiltonian on the single particle states and from the new single particle states calculating a new multi-particle state.
+# This is done for every unit multi_particle_state vector. Lastly summing their amplitude will result the new multi-particle state.
+    def H_manby_body(self, H_sb, multi_particle_state):
+        new_state = self.zero_vector()
 
+        for index in range(len(multi_particle_state)):
+            signle_body_states = self.index_2_perm(index)
+            #signle_body_states is the indices of the sites where the electrons seats.
+            #Since they are unit vecotrs the action of H_sb is just taking the apropriate column
+            new_single_particle_states = H_sb[:,signle_body_states]
+            # Summing the new multi-particle state with the right coeff
+            new_state += self.create(new_single_particle_states.T) * multi_particle_state[index]
+        
+        return new_state
 
 
 #%% single electron Hamiltonian
 
 # parametrs of the model
-Nx = 2
-Ny = 2
+Nx = 4
+Ny = 4
 
 N = Nx * Ny
 M = 0
@@ -94,8 +123,9 @@ t2 = (2-np.sqrt(2))/2
 
 # Building the single particle hamiltonian (h2)
 # need to check if the gauge transformation is needed to adress (Natanel said no)
-Kx = np.linspace(-np.pi,np.pi,num=Nx,endpoint=True)
-Ky = np.linspace(-np.pi,np.pi,num=Ny,endpoint=True)
+# Starting the BZ from zero to 2pi since this is how the DFT matrix is built
+Kx = np.linspace(0, 2 * np.pi,num=Nx,endpoint=False)
+Ky = np.linspace(0, 2 * np.pi,num=Ny,endpoint=False)
 X = np.array(range(Nx)) 
 Y = np.array(range(Ny)) 
 
@@ -120,21 +150,88 @@ H_k = block_diag(*H_k_list)
 
 # dft matrix as a tensor protuct of dft in x and y axis and idenity in the sublattice
 dft_matrix = np.kron(dft(Nx),(np.kron(dft(Ny),np.eye(2)))) / np.sqrt(N)
-H_real_space =np.matmul(np.matmul(dft_matrix.conjugate(),H_k), dft_matrix)
+H_real_space =np.matmul(np.matmul(dft_matrix.T.conjugate(),H_k), dft_matrix)
 
+
+
+# %%
 eig_val, eig_vec = np.linalg.eigh(H_real_space)
-
 # eigen states (projected on the lower energies) tensor (state index, real space position with A,B sublattices. 
 # for position x,y sublattice A the index is 2 * (Ny * x + y) + A
 eigen_states = eig_vec[:,:N].T
 
 # creating the multi particle integer quantum hall state with 2 * N sites and N electron (half filled)
-mps = Multi_particle_state(2 * N, N)
+mps = Multi_particle_state(2 * N, N - 1)
 multi_particle_state_vector = mps.create(eigen_states)
 
-print(multi_particle_state_vector)
+# print(multi_particle_state_vector)
 
+new_mp_state = mps.H_manby_body(H_real_space,multi_particle_state_vector)
 
+print(new_mp_state/multi_particle_state_vector)
+
+#%%
+#%% testing 
+
+# parametrs of the model
+Nx = 4
+Ny = 4
+
+N = Nx * Ny
+t1 = 1
+sub = 2
+# Building the single particle hamiltonian (h2)
+# need to check if the gauge transformation is needed to adress (Natanel said no)
+Kx = np.linspace(0, 2 * np.pi,num=Nx,endpoint=False) 
+Ky = np.linspace(0, 2 * np.pi,num=Ny,endpoint=False) 
+X = np.array(range(Nx)) 
+Y = np.array(range(Ny)) 
+
+# Kx, Ky = np.meshgrid(kx,ky)
+def build_h2(kx, ky):
+    return -2 * t1 * (np.cos(kx) + np.cos(ky)) * np.eye(sub)
+
+H_k_list = []
+for kx in Kx:
+    for ky in Ky:
+        H_k_list.append(build_h2(kx,ky))
+        
+# creaing a block diagonal H_k matrix and dft to real space
+
+H_k = block_diag(*H_k_list)
+
+# dft matrix as a tensor protuct of dft in x and y axis and idenity in the sublattice
+dft_matrix = np.kron(dft(Nx),(np.kron(dft(Ny),np.eye(sub)))) / np.sqrt(N)
+H_real_space =np.matmul(np.matmul(dft_matrix.T.conjugate(),H_k), dft_matrix)
+# eig_val, eig_vec = np.linalg.eigh(H_real_space)
+
+index = lambda x,y,A=0: sub * (Ny * x + y) + A
+vectors = np.eye(N * sub)
+H_real_space_2 = np.zeros((N * sub, N * sub))
+for i in range(Nx):
+    for j in range(Ny):
+        H_real_space_2 += -t1 * np.outer(vectors[:,index(i,j)], vectors[:,index((i+1)%Nx,j)] + vectors[:,index(i,(j+1)%Ny)] +  vectors[:,index((i-1)%Nx,j)] + vectors[:,index(i,(j-1)%Ny)])
+        H_real_space_2 += -t1 * np.outer(vectors[:,index(i,j,1)], vectors[:,index((i+1)%Nx,j,1)] + vectors[:,index(i,(j+1)%Ny,1)] +  vectors[:,index((i-1)%Nx,j,1)] + vectors[:,index(i,(j-1)%Ny,1)])
+plt.matshow(np.abs(H_real_space))
+plt.matshow(np.abs(H_real_space_2))
+print(np.diag(np.matmul(np.matmul(dft_matrix,H_real_space_2), dft_matrix.T.conjugate())).real)
+print(H_k_list)
+# print(H_real_space_2)
+state = np.zeros((N * sub))
+x = 1
+y = 1
+index = sub * (Ny * x + y) 
+state[index] =1
+# print_sb_state(state,Nx,Ny)
+# print_sb_state(H_real_space[:,index],Nx,Ny)
+
+#%% 
+mps2 = Multi_particle_state(5,3)
+states = np.eye(5)[:,:3].T
+tmp = states[0]
+states[0] = states[1]
+states[1] = np.array([1., 0., 0., 0., 0.])
+print(mps2.create(states))
 #%%
 # # TODO
 # 1. Write a non-interacting many body hamiltonian and check if multi_particle_state_vector is indeed eigen state with the proper energy
