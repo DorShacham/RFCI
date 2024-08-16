@@ -1,3 +1,116 @@
+#%%
+#%% 
+import numpy as np
+import matplotlib.pyplot as plt
+from itertools import permutations, combinations
+from scipy.linalg import block_diag,dft
+
+
+
+# Auxiliry
+
+# Normalizes @vec
+def normalize(vec):
+    norm = np.linalg.norm(vec)
+    if norm == 0:
+        return vec
+    else:
+        return vec/norm
+
+def print_sb_state(state,Nx,Ny):
+    map = np.zeros((Ny, 2 * Nx), dtype = complex)
+    for x in range((Nx)):
+        for y in range(Ny):
+            map[y,2 * x] = state[2 * (Ny * x + y)]
+            map[y,2 * x + 1] = state[2 * (Ny * x + y) + 1]
+    plt.matshow(np.abs(map))
+
+# calculate the parity of a given permution @perm and reutrn the parity. 
+# @return_sorted_array if True, return the sorted permutaion.
+def permutation_parity(perm, return_sorted_array = False):
+    inversions = 0
+    perm = np.array(perm)
+    for i in range(len(perm)):
+        for j in range(i + 1, len(perm)):
+            if perm[i] > perm[j]:
+                inversions += 1
+                if return_sorted_array:
+                    perm[i], perm[j] = perm[j], perm[i]
+    if return_sorted_array:
+        return (inversions % 2), perm
+    else:
+        return (inversions % 2)
+
+# Class that deals with with multi_particle_state with @N sites and @n electrons
+class Multi_particle_state:
+    def __init__(self, N, n):
+        objects = np.arange(N)
+        perms = list((combinations(objects, n)))
+        index_2_perm_list = perms
+        index = range(len(perms))
+        perm_2_index_dict =  {k: o for k, o in zip(perms, index)}
+        self.N = N
+        self.n = n
+        self.perm_2_index_dict = perm_2_index_dict
+        self.index_2_perm_list = index_2_perm_list
+        
+# Creats a vectors of zeros in the size of a multi particle state
+    def zero_vector(self):
+        multi_particle_state_vector = np.zeros((len(self.index_2_perm_list)), dtype = complex)
+        return multi_particle_state_vector
+
+# Tranlate index to permutation
+    def index_2_perm(self, index):
+        return self.index_2_perm_list[index]
+
+# Translate permutation to index in the multi paticle state vector
+    def perm_2_index(self, perm):
+        return self.perm_2_index_dict[tuple(perm)]
+
+# Create a multi particle state with n electrons and N sites. 
+# @state_array is an np.array of shape (n,N) the first index is the electron index.
+    def create(self, state_array):
+        N = self.N
+        n = self.n
+        assert((n,N) == np.shape(state_array))
+        sites = np.arange(N)
+
+        # Generate all ordered permutations of length n
+        perms_array = np.array(list(permutations(sites, n)))
+        multi_particle_state_vector = self.zero_vector()
+
+        for perm in perms_array:
+            state_coeff = 1
+            for electron_index in range(n):
+                state_coeff *= state_array[electron_index, perm[electron_index]]
+            
+            parity, soreted_perm = permutation_parity(perm = perm, return_sorted_array = True)
+            state_coeff *= (-1)**parity
+            multi_particle_state_index = self.perm_2_index(soreted_perm)
+            multi_particle_state_vector[multi_particle_state_index] += state_coeff
+
+
+        return normalize(multi_particle_state_vector)
+
+# Function that acts as a (non-interacting) many body Hamiltonian bases on a single body Hamiltonian @H_sb on state @multi_particle_state
+# The calculation is taking each unit vector in the multi-particle state, splitting it to single particle state calculating the action of
+# the single body hamiltonian on the single particle states and from the new single particle states calculating a new multi-particle state.
+# This is done for every unit multi_particle_state vector. Lastly summing their amplitude will result the new multi-particle state.
+    def H_manby_body(self, H_sb, multi_particle_state):
+        new_state = self.zero_vector()
+
+        for index in range(len(multi_particle_state)):
+            signle_body_states = self.index_2_perm(index)
+            #signle_body_states is the indices of the sites where the electrons seats.
+            #Since they are unit vecotrs the action of H_sb is just taking the apropriate column
+            new_single_particle_states = H_sb[:,signle_body_states]
+            # Summing the new multi-particle state with the right coeff
+            new_state += self.create(new_single_particle_states.T) * multi_particle_state[index]
+        
+        return new_state
+
+
+
 #%% testing 
 
 # parametrs of the model
