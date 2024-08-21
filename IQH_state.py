@@ -127,6 +127,10 @@ class Multi_particle_state:
         return new_state
 
 
+
+
+
+
 #%% single electron Hamiltonian
 
 # parametrs of the model
@@ -182,15 +186,46 @@ eigen_states = eig_vec[:,:n].T
 mps = Multi_particle_state(2 * N, n)
 multi_particle_state_vector = mps.create(eigen_states)
 
-# print(multi_particle_state_vector)
-
 new_mp_state = mps.H_manby_body(H_real_space,multi_particle_state_vector)
-
-print((new_mp_state/multi_particle_state_vector).real)
+# sanity check
+print((new_mp_state[np.abs(new_mp_state)>1e-8]/multi_particle_state_vector[np.abs(multi_particle_state_vector)>1e-8]).real)
 print(np.linalg.norm(normalize(new_mp_state) + multi_particle_state_vector))
 print(np.linalg.norm(multi_particle_state_vector))
 print(np.linalg.norm(new_mp_state))
 
+
+#%% 
+# Exatend the system on the x axis by adding unequippied cites. @extention_factor is a positive integer describe 
+# how many cites to add i.e N_new = extention_factor * N
+
+extention_factor = 3
+new_N = 2 * (extention_factor * Nx) * Ny   
+extended_mps = Multi_particle_state(N = new_N, n = n)
+extended_state = extended_mps.zero_vector()
+
+state = multi_particle_state_vector
+
+for index in range(len(state)):
+    perm = mps.index_2_perm(index)
+    new_perm = []
+    for i in range(n):
+        cite_index = perm[i]
+        x = cite_index // (2 * Ny)
+        new_cite_index = cite_index + 2 * Ny * (extention_factor - 1) * x
+        new_perm.append(new_cite_index)
+    
+    assert(permutation_parity(perm,False) == permutation_parity(new_perm,False))
+    new_index = extended_mps.perm_2_index(new_perm)
+    extended_state[new_index] = state[index]
+
+
+#%%
+new_extended_state = extended_mps.H_manby_body(H_real_space,extended_state)
+# sanity check
+# print((new_extended_state[np.abs(new_extended_state)>1e-8]/extended_state[np.abs(extended_state)>1e-8]).real)
+print(np.linalg.norm(normalize(new_extended_state) + extended_state))
+print(np.linalg.norm(extended_state))
+print(np.linalg.norm(new_extended_state))
 
 #%% 
 mps2 = Multi_particle_state(5,3)
