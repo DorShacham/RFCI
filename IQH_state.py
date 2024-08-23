@@ -2,8 +2,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import permutations, combinations
-from scipy.linalg import block_diag,dft
-
+from scipy.linalg import block_diag,dft,expm
+from tqdm import tqdm
 
 
 #%% Auxiliry
@@ -17,11 +17,24 @@ def normalize(vec):
         return vec/norm
 
 def print_sb_state(state,Nx,Ny):
-    map = np.zeros((Ny, 2 * Nx), dtype = complex)
+    map = np.zeros((2 * Ny, 2 * Nx), dtype = complex)
     for x in range((Nx)):
         for y in range(Ny):
-            map[y,2 * x] = state[2 * (Ny * x + y)]
-            map[y,2 * x + 1] = state[2 * (Ny * x + y) + 1]
+            map[2 * y,2 * x] = state[2 * (Ny * x + y)]
+            map[2 * y,2 * x + 1] = state[2 * (Ny * x + y) + 1]
+    plt.matshow(np.abs(map))
+
+def print_mp_state(state,Nx,Ny,mps):
+    map = np.zeros((2 * Ny, 2 * Nx), dtype = complex)
+    for index in range(len(state)):
+        v = np.zeros(mps.N, dtype= complex)
+        perm = mps.index_2_perm(index)
+        for p in perm:
+            v[p] = state[index]    
+        for x in range((Nx)):
+            for y in range(Ny):
+                map[2 * y,2 * x] += v[2 * (Ny * x + y)]
+                map[2 * y,2 * x + 1] += v[2 * (Ny * x + y) + 1]
     plt.matshow(np.abs(map))
 
 # calculate the parity of a given permution @perm and reutrn the parity. 
@@ -126,56 +139,69 @@ class Multi_particle_state:
         
         return new_state
 
+# Time evolve a multiparticle state for non-interacting Hamltonian
+    def time_evolve(self, H_sb, multi_particle_state, t = 1):
+        h_bar = 1
+        U = expm(-1j * t *  H_sb / h_bar)
+        new_state = self.zero_vector()
 
+        for index in tqdm(range(len(multi_particle_state))):
+            state_perm = self.index_2_perm(index)
+            state_list = []
+            for n in state_perm:
+                state_list.append(U[:,n])
 
+            new_state += self.create(np.array(state_list)) * multi_particle_state[index]
+        return new_state
 
-
-
-#%% single electron Hamiltonian
-
+# Create the single body Hamiltonian in real space
+def build_H(Nx = 2, Ny = 2):
 # parametrs of the model
-Nx = 2
-Ny = 2
+    N = Nx * Ny
+    M = 0
+    phi = np.pi/4
+    t1 = 1
+    t2 = (2-np.sqrt(2))/2
 
-N = Nx * Ny
-M = 0
-phi = np.pi/4
-t1 = 1
-t2 = (2-np.sqrt(2))/2
+    # Building the single particle hamiltonian (h2)
+    # need to check if the gauge transformation is needed to adress (Natanel said no)
+    # Starting the BZ from zero to 2pi since this is how the DFT matrix is built
+    Kx = np.linspace(0, 2 * np.pi,num=Nx,endpoint=False)
+    Ky = np.linspace(0, 2 * np.pi,num=Ny,endpoint=False)
+    X = np.array(range(Nx)) 
+    Y = np.array(range(Ny)) 
 
-# Building the single particle hamiltonian (h2)
-# need to check if the gauge transformation is needed to adress (Natanel said no)
-# Starting the BZ from zero to 2pi since this is how the DFT matrix is built
-Kx = np.linspace(0, 2 * np.pi,num=Nx,endpoint=False)
-Ky = np.linspace(0, 2 * np.pi,num=Ny,endpoint=False)
-X = np.array(range(Nx)) 
-Y = np.array(range(Ny)) 
+    # Kx, Ky = np.meshgrid(kx,ky)
+    def build_h2(kx, ky):
+        h11 = 2 * t2 * (np.cos(kx) - np.cos(ky)) + M
+        h12 = t1 * np.exp(1j * phi) * (1 + np.exp(1j * (ky - kx))) + t1 * t1 * np.exp(-1j * phi) * (np.exp(1j * (ky)) + np.exp(1j * (- kx)))
+        h2 = np.matrix([[h11, h12], [np.conjugate(h12), -h11]])
+        return h2
 
-# Kx, Ky = np.meshgrid(kx,ky)
-def build_h2(kx, ky):
-    h11 = 2 * t2 * (np.cos(kx) - np.cos(ky)) + M
-    h12 = t1 * np.exp(1j * phi) * (1 + np.exp(1j * (ky - kx))) + t1 * t1 * np.exp(-1j * phi) * (np.exp(1j * (ky)) + np.exp(1j * (- kx)))
-    h2 = np.matrix([[h11, h12], [np.conjugate(h12), -h11]])
-    return h2
+    H_k_list = []
+    for kx in Kx:
+        for ky in Ky:
+            H_single_particle = build_h2(kx,ky)
+            eig_val, eig_vec = np.linalg.eigh(H_single_particle)
+            h_flat = H_single_particle / np.abs(eig_val[0])  # flat band limit
+            H_k_list.append(h_flat)
+            
+    # creaing a block diagonal H_k matrix and dft to real space
 
-H_k_list = []
-for kx in Kx:
-    for ky in Ky:
-        H_single_particle = build_h2(kx,ky)
-        eig_val, eig_vec = np.linalg.eigh(H_single_particle)
-        h_flat = H_single_particle / np.abs(eig_val[0])  # flat band limit
-        H_k_list.append(h_flat)
-        
-# creaing a block diagonal H_k matrix and dft to real space
+    H_k = block_diag(*H_k_list)
 
-H_k = block_diag(*H_k_list)
-
-# dft matrix as a tensor protuct of dft in x and y axis and idenity in the sublattice
-dft_matrix = np.kron(dft(Nx),(np.kron(dft(Ny),np.eye(2)))) / np.sqrt(N)
-H_real_space =np.matmul(np.matmul(dft_matrix.T.conjugate(),H_k), dft_matrix)
-
+    # dft matrix as a tensor protuct of dft in x and y axis and idenity in the sublattice
+    dft_matrix = np.kron(dft(Nx),(np.kron(dft(Ny),np.eye(2)))) / np.sqrt(N)
+    H_real_space =np.matmul(np.matmul(dft_matrix.T.conjugate(),H_k), dft_matrix)
+    return H_real_space
 
 # %%
+Nx = 2
+Ny = 2
+N = Nx * Ny
+
+H_real_space = build_H(Nx, Ny)
+
 eig_val, eig_vec = np.linalg.eigh(H_real_space)
 # eigen states (projected on the lower energies) tensor (state index, real space position with A,B sublattices. 
 # for position x,y sublattice A the index is 2 * (Ny * x + y) + A
@@ -192,7 +218,9 @@ print((new_mp_state[np.abs(new_mp_state)>1e-8]/multi_particle_state_vector[np.ab
 print(np.linalg.norm(normalize(new_mp_state) + multi_particle_state_vector))
 print(np.linalg.norm(multi_particle_state_vector))
 print(np.linalg.norm(new_mp_state))
-
+print_mp_state(multi_particle_state_vector, Nx = Nx, Ny = Ny, mps = mps)
+# print_mp_state(new_mp_state, Nx = Nx, Ny = Ny, mps = mps)
+print_mp_state(mps.time_evolve(H_real_space,multi_particle_state_vector,t=100), Nx = Nx, Ny = Ny, mps = mps)
 
 #%% 
 # Exatend the system on the x axis by adding unequippied cites. @extention_factor is a positive integer describe 
@@ -220,20 +248,35 @@ for index in range(len(state)):
 
 
 #%%
-new_extended_state = extended_mps.H_manby_body(H_real_space,extended_state)
+extended_H = build_H(Nx = extention_factor * Nx, Ny = Ny)
+new_extended_state = extended_mps.H_manby_body(extended_H,extended_state)
+
 # sanity check
 # print((new_extended_state[np.abs(new_extended_state)>1e-8]/extended_state[np.abs(extended_state)>1e-8]).real)
 print(np.linalg.norm(normalize(new_extended_state) + extended_state))
 print(np.linalg.norm(extended_state))
 print(np.linalg.norm(new_extended_state))
+print_mp_state(extended_state, Nx = extention_factor * Nx, Ny = Ny, mps = extended_mps)
+# print_mp_state(prometed_state, Nx = extention_factor * Nx, Ny = Ny, mps = extended_mps)
+print_mp_state(extended_mps.time_evolve(extended_H, extended_state, t=1), Nx = extention_factor * Nx, Ny = Ny, mps = extended_mps)
 
 #%% 
-mps2 = Multi_particle_state(5,3)
-states = np.eye(5)[:,:3].T
-tmp = states[0]
-states[0] = states[1]
-states[1] = np.array([1., 0., 0., 0., 0.])
-print(mps2.create(states))
+Nx = 3
+Ny = 3
+N = 2 * Nx * Ny
+n = 3
+mps2 = Multi_particle_state(N,n)
+H = build_H(Nx,Ny)
+states = np.eye(N)[:,:n].T
+# tmp = states[0]
+# states[0] = states[1]
+# states[1] = np.array([1., 0., 0., 0., 0.])
+state = mps2.create(states)
+print_mp_state(state, Nx = Nx, Ny = Ny, mps = mps2)
+print_mp_state(mps2.time_evolve(H_sb=H,multi_particle_state=state,t=100), Nx = Nx, Ny = Ny, mps = mps2)
+# %%
+
+# %%
 #%%
 # # TODO
 # 1. Write a non-interacting many body hamiltonian and check if multi_particle_state_vector is indeed eigen state with the proper energy
