@@ -11,7 +11,7 @@ from IQH_state import create_IQH_in_extendend_lattice, print_mp_state
 #%%
 Nx = 2
 Ny = 2
-extention_factor = 1
+extention_factor = 3
 
 state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny, extention_factor = extention_factor)
-print_mp_state(state,Nx,Ny,mps)
+print_mp_state(state,extention_factor * Nx,Ny,mps)
