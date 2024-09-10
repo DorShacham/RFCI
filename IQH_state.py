@@ -17,8 +17,8 @@ def print_sb_state(state,Nx,Ny):
     map = np.zeros((2 * Ny, 2 * Nx), dtype = complex)
     for x in range((Nx)):
         for y in range(Ny):
-            map[2 * y,2 * x] = state[2 * (Ny * x + y)]
-            map[2 * y,2 * x + 1] = state[2 * (Ny * x + y) + 1]
+            map[2 * y,2 * x] = np.abs(state[2 * (Ny * x + y)])**2
+            map[2 * y + 1,2 * x + 1] = np.abs(state[2 * (Ny * x + y) + 1])**2
     plt.matshow(np.abs(map))
 
 def print_mp_state(state,Nx,Ny,mps):
@@ -27,12 +27,13 @@ def print_mp_state(state,Nx,Ny,mps):
         v = np.zeros(mps.N, dtype= complex)
         perm = mps.index_2_perm(index)
         for p in perm:
-            v[p] = state[index]    
+            v[p] = np.abs(state[index])**2
         for x in range((Nx)):
             for y in range(Ny):
-                map[2 * y,2 * x] += v[2 * (Ny * x + y)]
-                map[2 * y,2 * x + 1] += v[2 * (Ny * x + y) + 1]
+                map[2 * y ,2 * x] += v[2 * (Ny * x + y)]
+                map[2 * y + 1,2 * x + 1] += v[2 * (Ny * x + y) + 1]
     plt.matshow(np.abs(map))
+    plt.colorbar()
 
 # calculate the parity of a given permution @perm and reutrn the parity. 
 # @return_sorted_array if True, return the sorted permutaion.
@@ -228,5 +229,48 @@ def create_IQH_in_extendend_lattice(Nx,Ny,extention_factor):
         extended_state[new_index] = state[index]
 
     return extended_state, extended_mps
+
+# project the @state with @mps on @band = +1/-1 of Hamiltonin @H and return the overlap
+def project_on_band(state,band, H, mps):
+    assert(band == 1 or band == -1)
+    N = mps.N
+    n = mps.n
+    eig_val, eig_vec = np.linalg.eigh(H)    
+    if band == -1:
+        print("Calculting the number of electrons in the lower band:")
+        eig_vec = eig_vec[:,: N // 2]
+    elif band == 1:
+        print("Calculting the number of electrons in the upper band:")
+        eig_vec = eig_vec[:,N // 2:]
+
+    overlap = 0
+    # In this caluclation we calculate sum_k(<state|C_k^dagger C_k |state>) = sum_k( |C_k |state>|^2)
+    # Thus first we calculate C_k|state> and then it's norm squared. C_k kills an electron, thus we need a state with minus one electron.
+    new_mps = Multi_particle_state(N, n - 1)
+    
+    for k in range(N // 2):
+        overlap_k = 0
+        new_state = new_mps.zero_vector()
+        # the state = \Sigma_j=0 ^len(state) \alpha_i C_1_i^dagger...C_N_i^dagger|0>
+        for index in range(len(state)):
+            perm = mps.index_2_perm(index)
+        # Running on the j of the sum. If there is no C_j_dagger we have C_j|0> = 0  
+        # If there is C_j_dagger this will turn to another state
+            for j in range(N):
+                if not j in perm:
+                    continue
+                else:
+                    l = perm.index(j)
+                    new_perm = list(perm)
+                    del new_perm[l]
+                    new_index = new_mps.perm_2_index(new_perm)
+                    new_state[new_index] += (-1)**l * state[index] * eig_vec[j,k].conjugate()
+            
+        overlap_k += np.linalg.norm(new_state)**2
+        overlap += overlap_k
+        # print(f"k:{k} = {overlap_k}")
+        
+    print(f"--------\nThere are {overlap} electrons")
+    return overlap
 
 
