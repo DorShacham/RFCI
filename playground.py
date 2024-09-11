@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from itertools import permutations, combinations
 from scipy.linalg import block_diag,dft
 from IQH_state import *
+from flux_attch import *
+
 
 
 
@@ -67,7 +69,7 @@ state[index] =1
 
 #%%
 Nx = 2
-Ny = 3
+Ny = 2
 # number of electrons - half of the original system
 n = Nx * Ny 
 extention_factor = 3
@@ -77,18 +79,13 @@ Nx = extention_factor * Nx
 N = 2 * Nx * Ny
 
 H = build_H(Nx = Nx, Ny = Ny)
-new_state = mps.H_manby_body(H,state)
+# state = flux_attch_2_compact_state(state, mps, Ny)
 
-# print((new_state[np.abs(new_state)>1e-8]/state[np.abs(state)>1e-8]).real)
-# print(np.linalg.norm(normalize(new_state) + state))
-# print(np.linalg.norm(state))
-# print(np.linalg.norm(new_state))
-# print_mp_state(state, Nx = Nx, Ny = Ny, mps = mps)
-# print_mp_state(mps.time_evolve(H,state,t=100), Nx = Nx, Ny = Ny, mps = mps)
+print(np.linalg.norm(state))
+print_mp_state(state, Nx = Nx, Ny = Ny, mps = mps)
 
 m = project_on_band(state = state, band = -1, H = H, mps = mps)
 print("\n\n")
 p = project_on_band(state = state, band = 1, H = H, mps = mps)
 
 print(f"\nIn total there are {m+p} electrons\n\n")
-# %%

@@ -7,9 +7,10 @@ from qiskit.visualization import *
 from qiskit import QuantumRegister,ClassicalRegister
 from qiskit.quantum_info.operators import Operator
 from qiskit.visualization import array_to_latex
+from qiskit_nature.second_q.operators import FermionicOp
+from qiskit_nature.second_q.mappers import JordanWignerMapper
 
-
-from IQH_state import create_IQH_in_extendend_lattice, print_mp_state
+from IQH_state import *
 from flux_attch import *
 
 
@@ -68,3 +69,54 @@ test_state = state_2_full_state_vector(test_state, mps)
 print(np.linalg.norm(new_state_vector - test_state))
 print(np.linalg.norm(new_state_vector + test_state))
 # %%
+
+
+# %%
+
+# Initialzing state
+# Preparing the Full Hilbert 2^N state
+Nx = 2
+Ny = 2
+# number of electrons - half of the original system
+n = Nx * Ny 
+extention_factor = 3
+
+state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny, extention_factor = extention_factor)
+
+Nx = extention_factor * Nx
+N = 2 * Nx * Ny
+
+state_vector = state_2_full_state_vector(state, mps)
+
+H = build_H(Nx = Nx, Ny = Ny)
+hamiltonian_terms = {}
+for i in range(N):
+    for j in range(N):
+        hamiltonian_terms[f"+_{i} -_{j}"] = H[i,j]
+
+hamiltonian_terms = FermionicOp(hamiltonian_terms, num_spin_orbitals=N)
+qubit_converter = JordanWignerMapper()
+qiskit_H = qubit_converter.map(hamiltonian_terms)
+
+from qiskit.primitives import Estimator
+from qiskit.quantum_info import SparsePauliOp
+
+# Create your quantum circuit
+qc = QuantumCircuit(N)
+qc.initialize(state_vector, range(N))
+
+
+
+from qiskit import QuantumCircuit, Aer, execute
+from qiskit.quantum_info import Operator, Statevector
+from qiskit.opflow import StateFn, PauliExpectation, CircuitStateFn
+
+backend = Aer.get_backend('statevector_simulator')
+job = execute(qc, backend)
+statevector = job.result().get_statevector()
+
+# Create your operator (for example, a Pauli Z on the first qubit)
+
+# Calculate the expectation value
+expectation_value = StateFn(qiskit_H, is_measurement=True) @ StateFn(statevector)
+print(f"Expectation value: {expectation_value.eval().real}")
