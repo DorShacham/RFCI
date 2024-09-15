@@ -13,12 +13,21 @@ from qiskit.algorithms.optimizers import COBYLA
 from qiskit.primitives import Estimator
 from qiskit.circuit.library import EfficientSU2
 from qiskit.algorithms.minimum_eigensolvers import VQE
+from qiskit.circuit import ParameterVector
+from qiskit.circuit import Parameter
+from qiskit.circuit.library import ExcitationPreserving
+
+
+from scipy.linalg import expm
+
 
 
 from IQH_state import *
 from flux_attch import *
 
 
+
+# %%
 
 #%%
 
@@ -47,12 +56,26 @@ def build_qiskit_H(Nx, Ny):
 
     return qiskit_H
 
+# # create a 2 qbit general operator that conserver the number of electrons
+# def operator_with_parametrs(p1,p2,p3,p4,p5,p6):
+#     u = np.eye(4)
+#     # p1,p2,p3,p4,p5,p6 = ParameterVector('theta',6)
+
+#     H = np.array([[p1, p2 + 1 * p3], [p2 - 1 * p3, p4]])
+#     u[0,0] = np.exp(1 *  p5)
+#     u[-1,-1] = np.exp(1 *  p6)
+#     u[1:-1,1:-1] = expm(1 * H)
+#     u_operator = Operator(u).to_instruction()
+#     return u_operator
+
 # Creats an ansatz for vqe with @initial_state of @N qubits
 def vqe_ansatz(N, initail_state_vector):
     qc = QuantumCircuit(N)
     qc.initialize(initail_state_vector, range(N))
 
-    ansatz = EfficientSU2(N, entanglement='full',reps=30)
+
+
+    ansatz = ExcitationPreserving(N, reps=3, insert_barriers=True, entanglement='linear')
 
     qc.compose(ansatz, inplace= True)
     return qc
@@ -187,7 +210,7 @@ Nx = 2
 Ny = 2
 # number of electrons - half of the original system
 n = Nx * Ny 
-extention_factor = 1
+extention_factor = 3
 
 state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny, extention_factor = extention_factor)
 Nx = extention_factor * Nx
@@ -195,13 +218,20 @@ N = 2 * Nx * Ny
 # state = flux_attch_2_compact_state(state, mps, Ny)
 state_vector = state_2_full_state_vector(state, mps)
 
-estimator = Estimator()
+
+from qiskit_aer import AerSimulator
+from qiskit.primitives import BackendEstimator
+
+
+backend = AerSimulator(method='statevector')
+estimator = BackendEstimator(backend)
+# estimator = Estimator()
 ansatz = vqe_ansatz(N = N, initail_state_vector = state_vector)
 initial_params = np.zeros(ansatz.num_parameters)
 optimizer = COBYLA(maxiter = 100)
 qiskit_H = build_qiskit_H(Nx = Nx, Ny = Ny)
 
-vqe = VQE(estimator = estimator,ansatz = ansatz, optimizer = optimizer, initial_point=initial_params)
+vqe = VQE(estimator = estimator,ansatz = ansatz, optimizer = optimizer)
 # vqe = qiskit.algorithms.minimum_eigensolvers.VQE()
 
 result = vqe.compute_minimum_eigenvalue(qiskit_H)
