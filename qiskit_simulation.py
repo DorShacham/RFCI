@@ -1,38 +1,39 @@
 #%%
 import qiskit_nature, qiskit
-from qiskit import QuantumCircuit, execute, Aer, IBMQ
+from qiskit import QuantumCircuit
+from qiskit_aer import Aer
 from qiskit.compiler import transpile, assemble
-from qiskit.tools.jupyter import *
 from qiskit.visualization import *
 from qiskit import QuantumRegister,ClassicalRegister
 from qiskit.quantum_info.operators import Operator
 from qiskit.visualization import array_to_latex
 from qiskit_nature.second_q.operators import FermionicOp
 from qiskit_nature.second_q.mappers import JordanWignerMapper
-from qiskit.algorithms.optimizers import COBYLA
+from qiskit_algorithms.optimizers import COBYLA
 from qiskit.primitives import Estimator
 from qiskit.circuit.library import EfficientSU2
-from qiskit.algorithms.minimum_eigensolvers import VQE
+from qiskit_algorithms.minimum_eigensolvers import VQE
 from qiskit.circuit import ParameterVector
 from qiskit.circuit import Parameter
 from qiskit.circuit.library import ExcitationPreserving
-
+from qiskit_aer import AerSimulator, QasmSimulator
+from qiskit.primitives import BackendEstimatorV2
+from qiskit.primitives import StatevectorEstimator
+from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 
 from scipy.linalg import expm
 
-
-
 from IQH_state import *
 from flux_attch import *
+from My_vqe import VQE
 
 
-
-# %%
 
 #%%
 
-# Build the Hamiltonina Operator (with interction) from sparce Pauli strin for a lattice of shape (@Nx, @Ny)
-def build_qiskit_H(Nx, Ny):
+# Build the Hamiltonina Operator (with interction) from sparce Pauli strin for a lattice of shape (@Nx, @Ny).
+# If @return_NN = True then return a list of (n1,n2) nearest niegbors for anaztas entanglement.
+def build_qiskit_H(Nx, Ny, reutrn_NN = True):
     N = 2 * Nx * Ny
     H = build_H(Nx = Nx, Ny = Ny)
     hamiltonian_terms = {}
@@ -41,7 +42,8 @@ def build_qiskit_H(Nx, Ny):
         for j in range(N):
             hamiltonian_terms[f"+_{i} -_{j}"] = H[i,j]
 
-    # interaction
+    # interaction and nearest neighbors
+    NN = []
     for x in range(Nx):
         for y in range(Ny):
             n1 = cite_2_cite_index(x = x, y = y, sublattice = 0, Ny = Ny)
@@ -49,60 +51,23 @@ def build_qiskit_H(Nx, Ny):
                 for j in [0,1]:
                     n2 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 1, Ny = Ny)
                     hamiltonian_terms[f"+_{n1} -_{n1} +_{n2} -_{n2}"] = 0
+                    NN.append((n1,n2))
             
     hamiltonian_terms = FermionicOp(hamiltonian_terms, num_spin_orbitals=N)
     qubit_converter = JordanWignerMapper()
     qiskit_H = qubit_converter.map(hamiltonian_terms)
 
-    return qiskit_H
-
-# # create a 2 qbit general operator that conserver the number of electrons
-# def operator_with_parametrs(p1,p2,p3,p4,p5,p6):
-#     u = np.eye(4)
-#     # p1,p2,p3,p4,p5,p6 = ParameterVector('theta',6)
-
-#     H = np.array([[p1, p2 + 1 * p3], [p2 - 1 * p3, p4]])
-#     u[0,0] = np.exp(1 *  p5)
-#     u[-1,-1] = np.exp(1 *  p6)
-#     u[1:-1,1:-1] = expm(1 * H)
-#     u_operator = Operator(u).to_instruction()
-#     return u_operator
-
-# Creats an ansatz for vqe with @initial_state of @N qubits
-def vqe_ansatz(N, initail_state_vector):
-    qc = QuantumCircuit(N)
-    qc.initialize(initail_state_vector, range(N))
+    if reutrn_NN:
+        return qiskit_H, NN
+    else:
+        return qiskit_H
 
 
-
-    ansatz = ExcitationPreserving(N, reps=3, insert_barriers=True, entanglement='linear')
-
-    qc.compose(ansatz, inplace= True)
-    return qc
-
-
-#%%
-# Initialzing state
-# Preparing the Full Hilbert 2^N state
-Nx = 2
-Ny = 2
-# number of electrons - half of the original system
-n = Nx * Ny 
-extention_factor = 3
-
-state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny, extention_factor = extention_factor)
-
-Nx = extention_factor * Nx
-N = 2 * Nx * Ny
-
-state_vector = state_2_full_state_vector(state, mps)
-
-#%%
 # Build the phase attechment operator
 
 # build a 2 qubit gate adding the phase @angle if both electron in the i,j sites
 # return the gate
-def uij(i,j):
+def uij(i,j, mps, Ny):
     unitary = np.eye(4, dtype = complex)
     za = cite_index_2_z(i, mps, Ny)
     zb = cite_index_2_z(j, mps, Ny)
@@ -111,17 +76,40 @@ def uij(i,j):
     Op.label = str(f"{i},{j}")
     return Op
 
-qc = QuantumCircuit(N)
-qc.initialize(state_vector, range(N))
 
-for i in range(N):
-    for j in range(i + 1,N):
-        u = uij(i,j)
-        qc.append(u,[i,j])
+def flux_attch_gate(N, mps, Nx, Ny):
+    qc = QuantumCircuit(N)
+    for i in range(N):
+        for j in range(i + 1,N):
+            u = uij(i,j, mps, Ny)
+            qc.append(u,[i,j])
+    return transpile(qc)
 
-# qc.draw('mpl')
 
-#%% 
+
+#%% Testing flux attachments
+# Initialzing state
+# Preparing the Full Hilbert 2^N state
+Nx = 2
+Ny = 2
+# number of electrons - half of the original system
+n = Nx * Ny 
+extention_factor = 3
+
+state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny, extention_factor = extention_factor)
+
+Nx = extention_factor * Nx
+N = 2 * Nx * Ny
+
+state_vector = state_2_full_state_vector(state, mps)
+
+
+qc_init = QuantumCircuit(N)
+qc_init.initialize(state_vector, range(N))
+flux_attach = flux_attch_gate(N, mps, Nx, Ny)
+qc = qc_init.compose(flux_attach)
+
+
 # Run circit
 
 simulator = Aer.get_backend('statevector_simulator')
@@ -129,84 +117,20 @@ simulator = Aer.get_backend('statevector_simulator')
 result = simulator.run(qc).result()
 new_state_vector = np.array(result.get_statevector())
 
-#%% test
+
 test_state = flux_attch_2_compact_state(state, mps, Ny)
 test_state = state_2_full_state_vector(test_state, mps)
 
 print(np.linalg.norm(new_state_vector - test_state))
 print(np.linalg.norm(new_state_vector + test_state))
-# %%
 
 
-# %%
-
-# Initialzing state
-# Preparing the Full Hilbert 2^N state
-Nx = 2
-Ny = 2
-# number of electrons - half of the original system
-n = Nx * Ny 
-extention_factor = 3
-
-state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny, extention_factor = extention_factor)
-
-Nx = extention_factor * Nx
-N = 2 * Nx * Ny
-
-state_vector = state_2_full_state_vector(state, mps)
-
-H = build_H(Nx = Nx, Ny = Ny)
-hamiltonian_terms = {}
-# single body
-for i in range(N):
-    for j in range(N):
-        hamiltonian_terms[f"+_{i} -_{j}"] = H[i,j]
-
-# interaction
-for x in range(Nx):
-    for y in range(Ny):
-        n1 = cite_2_cite_index(x = x, y = y, sublattice = 0, Ny = Ny)
-        for i in [0,1]:
-            for j in [0,1]:
-                n2 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 1, Ny = Ny)
-                hamiltonian_terms[f"+_{n1} -_{n1} +_{n2} -_{n2}"] = 1
-        
-hamiltonian_terms = FermionicOp(hamiltonian_terms, num_spin_orbitals=N)
-qubit_converter = JordanWignerMapper()
-qiskit_H = qubit_converter.map(hamiltonian_terms)
-
-from qiskit.primitives import Estimator
-from qiskit.quantum_info import SparsePauliOp
-
-# Create your quantum circuit
-qc = QuantumCircuit(N)
-qc.initialize(state_vector, range(N))
-
-
-
-from qiskit import QuantumCircuit, Aer, execute
-from qiskit.quantum_info import Operator, Statevector
-from qiskit.opflow import StateFn, PauliExpectation, CircuitStateFn
-
-backend = Aer.get_backend('statevector_simulator')
-job = execute(qc, backend)
-statevector = job.result().get_statevector()
-
-# Create your operator (for example, a Pauli Z on the first qubit)
-
-# Calculate the expectation value
-expectation_value = StateFn(qiskit_H, is_measurement=True) @ StateFn(statevector)
-print(f"Expectation value: {expectation_value.eval().real}")
-
-#%%
-qc = vqe_ansatz(N = 3, initail_state_vector = np.eye(8)[:,0])
-qc.draw('mpl')
 
 
 #%% VQE
 # Initialzing state
 # Preparing the Full Hilbert 2^N state
-Nx = 2
+Nx = 1
 Ny = 2
 # number of electrons - half of the original system
 n = Nx * Ny 
@@ -215,34 +139,25 @@ extention_factor = 3
 state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny, extention_factor = extention_factor)
 Nx = extention_factor * Nx
 N = 2 * Nx * Ny
-# state = flux_attch_2_compact_state(state, mps, Ny)
+state = flux_attch_2_compact_state(state, mps, Ny)
 state_vector = state_2_full_state_vector(state, mps)
 
-
-from qiskit_aer import AerSimulator
-from qiskit.primitives import BackendEstimator
-
-
-backend = AerSimulator(method='statevector')
-estimator = BackendEstimator(backend)
-# estimator = Estimator()
-ansatz = vqe_ansatz(N = N, initail_state_vector = state_vector)
-initial_params = np.zeros(ansatz.num_parameters)
-optimizer = COBYLA(maxiter = 100)
-qiskit_H = build_qiskit_H(Nx = Nx, Ny = Ny)
-
-vqe = VQE(estimator = estimator,ansatz = ansatz, optimizer = optimizer)
-# vqe = qiskit.algorithms.minimum_eigensolvers.VQE()
-
-result = vqe.compute_minimum_eigenvalue(qiskit_H)
-
-print(f"VQE Result: {result.eigenvalue.real:.6f}")
-# print(f"Optimal Parameters: {result.optimal_parameters}")
-qc = QuantumCircuit(N)
-qc.initialize(state_vector, range(N))
-result2 = estimator.run(qc, build_qiskit_H(Nx, Ny)).result()
-expectation_value = result2.values[0]
-
-print(f"Expectation value: {expectation_value}")
+qiskit_H, NN = build_qiskit_H(Nx = Nx, Ny = Ny, reutrn_NN=True)
+qc_inital_state = QuantumCircuit(N)
+qc_inital_state.initialize(state_vector, range(N))
 
 
+estimator = StatevectorEstimator()
+
+
+pub = (qc_inital_state, qiskit_H)
+job = estimator.run([pub])
+result = job.result()[0]
+
+print(f"Expectation value: {result.data.evs}")
+
+#
+ansatz = ExcitationPreserving(N, reps=5, insert_barriers=True, entanglement=NN,initial_state=qc_inital_state,flatten=True)
+vqe = VQE(estimator=estimator, ansatz=ansatz, hamiltonian=qiskit_H)
+vqe.minimize()
+vqe.plot()
