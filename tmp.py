@@ -1,3 +1,4 @@
+#%%
 import qiskit_nature, qiskit
 from qiskit import QuantumCircuit
 from qiskit_aer import Aer
@@ -18,19 +19,18 @@ from qiskit.circuit.library import ExcitationPreserving
 from qiskit_aer import AerSimulator, QasmSimulator
 from qiskit.primitives import BackendEstimatorV2
 from qiskit.primitives import StatevectorEstimator
-
-
-
+from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
+from qiskit.quantum_info import SparsePauliOp
 
 from scipy.linalg import expm
 
-
-
 from IQH_state import *
 from flux_attch import *
+from My_vqe import *
 
 
-#%%
+
+
 
 # Build the Hamiltonina Operator (with interction) from sparce Pauli strin for a lattice of shape (@Nx, @Ny).
 # If @return_NN = True then return a list of (n1,n2) nearest niegbors for anaztas entanglement.
@@ -43,7 +43,7 @@ def build_qiskit_H(Nx, Ny, reutrn_NN = True):
         for j in range(N):
             hamiltonian_terms[f"+_{i} -_{j}"] = H[i,j]
 
-    # interaction
+    # interaction and nearest neighbors
     NN = []
     for x in range(Nx):
         for y in range(Ny):
@@ -51,7 +51,7 @@ def build_qiskit_H(Nx, Ny, reutrn_NN = True):
             for i in [0,1]:
                 for j in [0,1]:
                     n2 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 1, Ny = Ny)
-                    hamiltonian_terms[f"+_{n1} -_{n1} +_{n2} -_{n2}"] = 0
+                    hamiltonian_terms[f"+_{n1} -_{n1} +_{n2} -_{n2}"] = 10
                     NN.append((n1,n2))
             
     hamiltonian_terms = FermionicOp(hamiltonian_terms, num_spin_orbitals=N)
@@ -63,42 +63,57 @@ def build_qiskit_H(Nx, Ny, reutrn_NN = True):
     else:
         return qiskit_H
 
-def vqe_ansatz(N, initail_state_vector):
+
+# Build the phase attechment operator
+
+# build a 2 qubit gate adding the phase @angle if both electron in the i,j sites
+# return the gate
+def uij(i,j, mps, Ny):
+    unitary = np.eye(4, dtype = complex)
+    za = cite_index_2_z(i, mps, Ny)
+    zb = cite_index_2_z(j, mps, Ny)
+    unitary[-1,-1] = np.exp(2j * np.angle(za - zb))
+    Op = Operator(unitary).to_instruction()
+    Op.label = str(f"{i},{j}")
+    return Op
+
+
+def flux_attch_gate(N, mps, Nx, Ny):
     qc = QuantumCircuit(N)
-    qc.initialize(initail_state_vector, range(N))
+    for i in range(N):
+        for j in range(i + 1,N):
+            u = uij(i,j, mps, Ny)
+            qc.append(u,[i,j])
+    return transpile(qc)
 
 
+# %%
 
-    ansatz = ExcitationPreserving(N, reps=3, insert_barriers=True, entanglement='linear')
-
-    qc.compose(ansatz, inplace= True)
-    return qc
-
-
-
+#%%
+# Initialzing state
+# Preparing the Full Hilbert 2^N state
 Nx = 1
 Ny = 2
 # number of electrons - half of the original system
 n = Nx * Ny 
-extention_factor = 1
-
-state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny, extention_factor = extention_factor)
+extention_factor = 3
 Nx = extention_factor * Nx
 N = 2 * Nx * Ny
-# state = flux_attch_2_compact_state(state, mps, Ny)
-state_vector = state_2_full_state_vector(state, mps)
+qiskit_H = build_qiskit_H(Nx = Nx, Ny = Ny, reutrn_NN=False)
 
-qiskit_H, NN = build_qiskit_H(Nx = Nx, Ny = Ny, reutrn_NN=True)
-qc_inital_state = QuantumCircuit(N)
-qc_inital_state.initialize(state_vector, range(N))
+from qiskit.quantum_info import SparsePauliOp
 
-backend = AerSimulator(method='statevector') 
-estimator = BackendEstimatorV2(backend=backend)
-estimator = StatevectorEstimator()
-qc = qc_inital_state
-H = qiskit_H
-pub = (qc_inital_state, qiskit_H)
-job = estimator.run([pub])
-result = job.result()[0]
+# Assuming you have a SparsePauliOp object called 'sparse_pauli_op'
+sparse_matrix = qiskit_H.to_matrix(sparse=True)
 
-print(f"Expectation value: {result.data.evs}")
+import numpy as np
+from scipy.sparse import csr_matrix
+from scipy.sparse.linalg import eigsh
+
+# Example: Creating a random sparse matrix
+
+
+# Compute k largest eigenvalues and corresponding eigenvectors
+k = 100  # Number of eigenvalues/vectors to compute
+eigenvalues, eigenvectors = eigsh(sparse_matrix, k=k, which='SA')
+print(sorted(eigenvalues))

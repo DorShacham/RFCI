@@ -5,7 +5,7 @@ from itertools import permutations, combinations
 from scipy.linalg import block_diag,dft,expm
 from tqdm import tqdm
 from IQH_state import *
-
+from flux_attch import *
 
 # %%
 Nx = 2
@@ -112,10 +112,11 @@ extention_factor = 3
 state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny, extention_factor = extention_factor)
 Nx = extention_factor * Nx
 N = 2 * Nx * Ny
+state = flux_attch_2_compact_state(state, mps, Ny)
+
 
 H = build_H(Nx = Nx, Ny = Ny)
-new_state = mps.H_manby_body(H,state)
-
+# new_state = mps.H_manby_body(H,state)  
 # print((new_state[np.abs(new_state)>1e-8]/state[np.abs(state)>1e-8]).real)
 # print(np.linalg.norm(normalize(new_state) + state))
 # print(np.linalg.norm(state))
@@ -127,8 +128,8 @@ m = project_on_band(state = state, band = -1, H = H, mps = mps)
 print("\n\n")
 p = project_on_band(state = state, band = 1, H = H, mps = mps)
 
-p - m
-
+print(f"\nAll in all there are:{p + m} electrons\n")
+print(f"All in all the energy is:{p - m}")
 # %%
 #%%
 # # TODO
