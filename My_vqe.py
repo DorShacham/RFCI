@@ -6,12 +6,15 @@ import matplotlib.pyplot as plt
 from qiskit.primitives import BackendEstimatorV2
 from qiskit_aer import AerSimulator, QasmSimulator
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
+from qiskit.quantum_info import Statevector
 
-# VQE impliminatation: taking @estimator @ansatz @hamiltonian and find paramters 
-# for the @ansatz that minimizes the @hamiltonian expection value according to @estimator
+
+# VQE impliminatation: taking @ansatz @hamiltonian and find paramters 
+# for the @ansatz that minimizes the @hamiltonian expection value according to my_estimator.
+# @initial_state is the state of the quantum ciricut before the anzats
 class VQE:
-    def __init__(self,estimator,ansatz,hamiltonian):
-        self.estimator = estimator
+    def __init__(self, initial_state ,ansatz,hamiltonian):
+        self.initial_state = initial_state
         self.ansatz = ansatz
         self.hamiltonian = hamiltonian
         self.cost_history_dict = {
@@ -35,9 +38,10 @@ class VQE:
         Returns:
             float: Energy estimate
         """
-        pub = (self.ansatz, [self.hamiltonian], [params])
-        result = self.estimator.run(pubs=[pub]).result()
-        energy = result[0].data.evs[0]
+        # pub = (self.ansatz, [self.hamiltonian], [params])
+        # result = self.estimator.run(pubs=[pub]).result()
+        # energy = result[0].data.evs[0]
+        energy = my_estimator(self.initial_state, self.ansatz.assign_parameters(params), self.hamiltonian).real
 
         self.cost_history_dict["iters"] += 1
         self.cost_history_dict["prev_vector"] = params
@@ -69,3 +73,10 @@ class VQE:
         plt.xlabel("Iterations")
         plt.ylabel("Cost")
         plt.draw()
+
+
+# Calculate the expection value of @operator on final state from @qc with @initial_state
+def my_estimator(initial_state,qc,operator):
+    sv = Statevector(initial_state)
+    sv = sv.evolve(qc)
+    return sv.expectation_value(operator)
