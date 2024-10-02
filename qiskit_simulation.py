@@ -20,16 +20,17 @@ from qiskit_aer import AerSimulator, QasmSimulator
 from qiskit.primitives import BackendEstimatorV2
 from qiskit.primitives import StatevectorEstimator
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
+from qiskit.quantum_info import SparsePauliOp
 
 from scipy.linalg import expm
 
 from IQH_state import *
 from flux_attch import *
-from My_vqe import VQE
+from My_vqe import *
 
 
 
-#%%
+
 
 # Build the Hamiltonina Operator (with interction) from sparce Pauli strin for a lattice of shape (@Nx, @Ny).
 # If @return_NN = True then return a list of (n1,n2) nearest niegbors for anaztas entanglement.
@@ -50,7 +51,7 @@ def build_qiskit_H(Nx, Ny, reutrn_NN = True):
             for i in [0,1]:
                 for j in [0,1]:
                     n2 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 1, Ny = Ny)
-                    hamiltonian_terms[f"+_{n1} -_{n1} +_{n2} -_{n2}"] = 0
+                    hamiltonian_terms[f"+_{n1} -_{n1} +_{n2} -_{n2}"] = 1e-1
                     NN.append((n1,n2))
             
     hamiltonian_terms = FermionicOp(hamiltonian_terms, num_spin_orbitals=N)
@@ -90,39 +91,39 @@ def flux_attch_gate(N, mps, Nx, Ny):
 #%% Testing flux attachments
 # Initialzing state
 # Preparing the Full Hilbert 2^N state
-Nx = 2
-Ny = 2
-# number of electrons - half of the original system
-n = Nx * Ny 
-extention_factor = 3
+# Nx = 1
+# Ny = 2
+# # number of electrons - half of the original system
+# n = Nx * Ny 
+# extention_factor = 3
 
-state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny, extention_factor = extention_factor)
+# state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny, extention_factor = extention_factor)
 
-Nx = extention_factor * Nx
-N = 2 * Nx * Ny
+# Nx = extention_factor * Nx
+# N = 2 * Nx * Ny
 
-state_vector = state_2_full_state_vector(state, mps)
-
-
-qc_init = QuantumCircuit(N)
-qc_init.initialize(state_vector, range(N))
-flux_attach = flux_attch_gate(N, mps, Nx, Ny)
-qc = qc_init.compose(flux_attach)
+# state_vector = state_2_full_state_vector(state, mps)
 
 
-# Run circit
-
-simulator = Aer.get_backend('statevector_simulator')
-# Run and get the result object
-result = simulator.run(qc).result()
-new_state_vector = np.array(result.get_statevector())
+# qc_init = QuantumCircuit(N)
+# qc_init.initialize(state_vector, range(N))
+# flux_attach = flux_attch_gate(N, mps, Nx, Ny)
+# qc = qc_init.compose(flux_attach)
 
 
-test_state = flux_attch_2_compact_state(state, mps, Ny)
-test_state = state_2_full_state_vector(test_state, mps)
+# # Run circit
 
-print(np.linalg.norm(new_state_vector - test_state))
-print(np.linalg.norm(new_state_vector + test_state))
+# simulator = Aer.get_backend('statevector_simulator')
+# # Run and get the result object
+# result = simulator.run(qc).result()
+# new_state_vector = np.array(result.get_statevector())
+
+
+# test_state = flux_attch_2_compact_state(state, mps, Ny)
+# test_state = state_2_full_state_vector(test_state, mps)
+
+# print(np.linalg.norm(new_state_vector - test_state))
+# print(np.linalg.norm(new_state_vector + test_state))
 
 
 
@@ -131,7 +132,7 @@ print(np.linalg.norm(new_state_vector + test_state))
 # Initialzing state
 # Preparing the Full Hilbert 2^N state
 Nx = 1
-Ny = 2
+Ny = 3
 # number of electrons - half of the original system
 n = Nx * Ny 
 extention_factor = 3
@@ -143,21 +144,12 @@ state = flux_attch_2_compact_state(state, mps, Ny)
 state_vector = state_2_full_state_vector(state, mps)
 
 qiskit_H, NN = build_qiskit_H(Nx = Nx, Ny = Ny, reutrn_NN=True)
-qc_inital_state = QuantumCircuit(N)
-qc_inital_state.initialize(state_vector, range(N))
+
+result = my_estimator(state_vector,QuantumCircuit(N),qiskit_H)
+print(f"Expectation value: {result.real}")
 
 
-estimator = StatevectorEstimator()
-
-
-pub = (qc_inital_state, qiskit_H)
-job = estimator.run([pub])
-result = job.result()[0]
-
-print(f"Expectation value: {result.data.evs}")
-
-#
-ansatz = ExcitationPreserving(N, reps=5, insert_barriers=True, entanglement=NN,initial_state=qc_inital_state,flatten=True)
-vqe = VQE(estimator=estimator, ansatz=ansatz, hamiltonian=qiskit_H)
+ansatz = ExcitationPreserving(N, reps=2, insert_barriers=True, entanglement=NN,flatten=True)
+vqe = VQE(initial_state=state_vector, ansatz=ansatz, hamiltonian=qiskit_H)
 vqe.minimize()
 vqe.plot()
