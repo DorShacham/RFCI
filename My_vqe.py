@@ -13,7 +13,7 @@ from qiskit.quantum_info import Statevector
 # for the @ansatz that minimizes the @hamiltonian expection value according to my_estimator.
 # @initial_state is the state of the quantum ciricut before the anzats
 class VQE:
-    def __init__(self, initial_state ,ansatz,hamiltonian):
+    def __init__(self, initial_state ,ansatz,hamiltonian, maxiter = 1e5):
         self.initial_state = initial_state
         self.ansatz = ansatz
         self.hamiltonian = hamiltonian
@@ -22,6 +22,8 @@ class VQE:
             "iters": 0,
             "cost_history": [],
         }
+        self.maxiter = maxiter
+        self.res = None
 
 # calculate the cost_function - the expection value of self.hamiltonian according to self.estimator
 # with self.anzats(@params)
@@ -53,8 +55,8 @@ class VQE:
 # start the optimization proccess. all data on optimization is saved in self.cost_history_dict
     def minimize(self):
 
-        x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters)
-
+        # x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters)
+        x0 = np.zeros(self.ansatz.num_parameters)
 
         res = minimize(
             self.cost_func,
@@ -62,9 +64,11 @@ class VQE:
             args=(),
             method="cobyla",
             # tol=0.01,
-            options={"maxiter":1e5},
+            options={"maxiter":self.maxiter},
         )
         print(res)
+        self.res = res
+        return res
 
 # plot cost function as a function of iterations.
     def plot(self):
