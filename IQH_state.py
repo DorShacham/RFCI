@@ -196,13 +196,12 @@ def build_H(Nx = 2, Ny = 2):
 # Creating an Interger Quantum Hall state on a 2 * Nx * Ny lattice and then extend the lattice by extention_factor
 # in the x direction
 # return the state vector, extended_mps
-def create_IQH_in_extendend_lattice(Nx,Ny,extention_factor):
+def create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor):
     N = Nx * Ny
     H_real_space = build_H(Nx, Ny)
     eig_val, eig_vec = np.linalg.eigh(H_real_space)
 # eigen states (projected on the lower energies) tensor (state index, real space position with A,B sublattices. 
 # for position x,y sublattice A the index is 2 * (Ny * x + y) + A
-    n = N
     eigen_states = eig_vec[:,:n].T
 # creating the multi particle integer quantum hall state with 2 * N sites and n=N electron (half filled)
     mps = Multi_particle_state(2 * N, n)

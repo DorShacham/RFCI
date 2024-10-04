@@ -34,7 +34,7 @@ from My_vqe import *
 
 # Build the Hamiltonina Operator (with interction) from sparce Pauli strin for a lattice of shape (@Nx, @Ny).
 # If @return_NN = True then return a list of (n1,n2) nearest niegbors for anaztas entanglement.
-def build_qiskit_H(Nx, Ny, reutrn_NN = True):
+def build_qiskit_H(Nx, Ny, interaction_strength = 1e-1, reutrn_NN = True):
     N = 2 * Nx * Ny
     H = build_H(Nx = Nx, Ny = Ny)
     hamiltonian_terms = {}
@@ -51,7 +51,7 @@ def build_qiskit_H(Nx, Ny, reutrn_NN = True):
             for i in [0,1]:
                 for j in [0,1]:
                     n2 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 1, Ny = Ny)
-                    hamiltonian_terms[f"+_{n1} -_{n1} +_{n2} -_{n2}"] = 1e-1
+                    hamiltonian_terms[f"+_{n1} -_{n1} +_{n2} -_{n2}"] = interaction_strength
                     NN.append((n1,n2))
             
     hamiltonian_terms = FermionicOp(hamiltonian_terms, num_spin_orbitals=N)
@@ -134,22 +134,34 @@ def flux_attch_gate(N, mps, Nx, Ny):
 Nx = 1
 Ny = 3
 # number of electrons - half of the original system
-n = Nx * Ny 
+interaction_strength = 1e-1
 extention_factor = 3
+n = 2 * extention_factor * Nx * Ny // 6
+# n = 2
 
-state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny, extention_factor = extention_factor)
+state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny,n=n, extention_factor = extention_factor)
+
 Nx = extention_factor * Nx
 N = 2 * Nx * Ny
-state = flux_attch_2_compact_state(state, mps, Ny)
+# state = flux_attch_2_compact_state(state, mps, Ny)
 state_vector = state_2_full_state_vector(state, mps)
 
-qiskit_H, NN = build_qiskit_H(Nx = Nx, Ny = Ny, reutrn_NN=True)
+qiskit_H, NN = build_qiskit_H(Nx = Nx, Ny = Ny, interaction_strength = interaction_strength, reutrn_NN=True)
 
 result = my_estimator(state_vector,QuantumCircuit(N),qiskit_H)
 print(f"Expectation value: {result.real}")
 
 
-ansatz = ExcitationPreserving(N, reps=2, insert_barriers=True, entanglement=NN,flatten=True)
-vqe = VQE(initial_state=state_vector, ansatz=ansatz, hamiltonian=qiskit_H)
-vqe.minimize()
+ansatz = ExcitationPreserving(N, reps=2, insert_barriers=False, entanglement=NN,flatten=True)
+vqe = VQE(initial_state=state_vector, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = 500)
+res = vqe.minimize()
+vqe.plot()
+
+#%%
+# state_vector = Statevector(state_vector).evolve(ansatz.assign_parameters(res.x)).data
+state_vector = Statevector(state_vector).evolve(ansatz.assign_parameters(res.x)).evolve(flux_attch_gate(N, mps, Nx, Ny)).data
+qiskit_H= build_qiskit_H(Nx = Nx, Ny = Ny, interaction_strength = 1e-1, reutrn_NN=False)
+ansatz = ExcitationPreserving(N, reps=2, insert_barriers=False, entanglement=NN,flatten=True)
+vqe = VQE(initial_state=state_vector, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = 1e3)
+res = vqe.minimize()
 vqe.plot()
