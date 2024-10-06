@@ -86,8 +86,65 @@ def flux_attch_gate(N, mps, Nx, Ny):
             qc.append(u,[i,j])
     return transpile(qc)
 
+# create an excitation preserving translation_invariant_ansatz according to the symmetris of the problem
+# For lattice of size @Nx @Ny with @reps
+def translation_invariant_ansatz(Nx, Ny, reps):
+    NN = []
+    for x in range(Nx):
+        for y in range(Ny):
+            n1 = cite_2_cite_index(x = x, y = y, sublattice = 0, Ny = Ny)
+            for i in [0,1]:
+                for j in [0,1]:
+                    n2 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 1, Ny = Ny)
+                    NN.append((n1,n2))
 
+    N = 2 * Nx * Ny
+    num_qubits = N
+    ansatz = ExcitationPreserving(
+        num_qubits=num_qubits,
+        reps=reps,
+        entanglement=NN,
+        mode='fsim',
+        insert_barriers=False,
+        flatten=True
+    )
 
+    old_parm_per_rep = N + len(NN) * 2
+    param_per_single_qubit = 2 # 2 cites in cell
+    param_per_NN = 2 * 2 # there are 4 NN, out of which there is reflection invaraince in both direction meaning only 2 uniqe directions. The other 2 is becuase the anzats use 2 params per pair.
+    parm_per_rep = param_per_single_qubit + param_per_NN
+    num_of_params = parm_per_rep * reps + param_per_single_qubit
+    # Create a ParameterVector for the unique parameters
+    unique_params = ParameterVector('θ', num_of_params)
+
+    # 4. Bind the parameters to achieve translation invariance
+    param_dict = {}
+    for rep in range(reps):
+        for i in range(N):
+            sublattice = i % 2
+            param_dict[ansatz.parameters[i + old_parm_per_rep * rep]] = unique_params[sublattice + parm_per_rep * rep]
+        for i in range(len(NN) // 4):
+            param_dict[ansatz.parameters[0 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[0 + param_per_single_qubit + parm_per_rep * rep]
+            param_dict[ansatz.parameters[1 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[1 + param_per_single_qubit + parm_per_rep * rep]
+            
+            param_dict[ansatz.parameters[2 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[2 + param_per_single_qubit + parm_per_rep * rep]
+            param_dict[ansatz.parameters[3 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[3 + param_per_single_qubit + parm_per_rep * rep]
+            param_dict[ansatz.parameters[4 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[2 + param_per_single_qubit + parm_per_rep * rep]
+            param_dict[ansatz.parameters[5 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[3 + param_per_single_qubit + parm_per_rep * rep]
+
+            param_dict[ansatz.parameters[6 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[0 + param_per_single_qubit + parm_per_rep * rep]
+            param_dict[ansatz.parameters[7 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[1 + param_per_single_qubit + parm_per_rep * rep]
+    # final rotation
+    for i in range(N):
+            sublattice = i % 2
+            param_dict[ansatz.parameters[i + old_parm_per_rep * reps]] = unique_params[sublattice + parm_per_rep * reps]
+
+    # Bind the parameters
+    translation_invariant_ansatz = ansatz.assign_parameters(param_dict)
+
+    print(f"Number of parameters after binding: {translation_invariant_ansatz.num_parameters}")
+    print(f"Parameter names after binding: {translation_invariant_ansatz.parameters}")
+    return translation_invariant_ansatz
 #%% Testing flux attachments
 # Initialzing state
 # Preparing the Full Hilbert 2^N state
@@ -131,11 +188,11 @@ def flux_attch_gate(N, mps, Nx, Ny):
 #%% VQE
 # Initialzing state
 # Preparing the Full Hilbert 2^N state
-Nx = 1
+Nx = 3
 Ny = 3
 # number of electrons - half of the original system
 interaction_strength = 1e-1
-extention_factor = 3
+extention_factor = 1
 n = 2 * extention_factor * Nx * Ny // 6
 # n = 2
 
@@ -152,8 +209,10 @@ result = my_estimator(state_vector,QuantumCircuit(N),qiskit_H)
 print(f"Expectation value: {result.real}")
 
 
-ansatz = ExcitationPreserving(N, reps=2, insert_barriers=False, entanglement=NN,flatten=True)
-vqe = VQE(initial_state=state_vector, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = 500)
+#%%
+# ansatz = ExcitationPreserving(N, reps=1, insert_barriers=False, entanglement=NN,flatten=True)
+ansatz = translation_invariant_ansatz(Nx, Ny, reps = 1)
+vqe = VQE(initial_state=state_vector, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = 100)
 res = vqe.minimize()
 vqe.plot()
 
@@ -161,7 +220,7 @@ vqe.plot()
 # state_vector = Statevector(state_vector).evolve(ansatz.assign_parameters(res.x)).data
 state_vector = Statevector(state_vector).evolve(ansatz.assign_parameters(res.x)).evolve(flux_attch_gate(N, mps, Nx, Ny)).data
 qiskit_H= build_qiskit_H(Nx = Nx, Ny = Ny, interaction_strength = 1e-1, reutrn_NN=False)
-ansatz = ExcitationPreserving(N, reps=2, insert_barriers=False, entanglement=NN,flatten=True)
-vqe = VQE(initial_state=state_vector, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = 1e3)
+ansatz = translation_invariant_ansatz(Nx, Ny, reps = 1)
+vqe = VQE(initial_state=state_vector, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = 1e2)
 res = vqe.minimize()
 vqe.plot()
