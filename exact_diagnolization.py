@@ -119,7 +119,7 @@ from IQH_state import *
 from flux_attch import *
 
 # Lattice shape
-Nx = 2
+Nx = 3
 Ny = 3
 N = 2 * Nx * Ny
 
