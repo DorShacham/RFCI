@@ -19,8 +19,8 @@ N = 2 * Nx * Ny
 # Number of electrons
 n = N//6
 # n = 2
-interaction_strength = 1e0
-band_energy = 1e2
+interaction_strength = 1e-1
+band_energy = 1e0
 H_sb = build_H(Nx = Nx, Ny = Ny, band_energy = band_energy)
 
 NN = []
@@ -80,6 +80,7 @@ for index in tqdm(range(len(v))):
 rows, cols = zip(*data_dict.keys())
 values = list(data_dict.values())
 sparse_matrix = sparse.csc_matrix((values, (rows, cols)))
+sparse.save_npz(f'files/sparse_matrix_Nx-{Nx}_Ny-{Ny}.npz', sparse_matrix)
 
 
 
@@ -115,21 +116,21 @@ import pickle
 from IQH_state import *
 from flux_attch import *
 
-Nx = 3
-Ny = 3
+Nx = 2
+Ny = 6
 N = 2 * Nx * Ny
 
 # Number of electrons
 n = N // 6
 mps = Multi_particle_state(N=N, n=n)
 
-with open(f'files/data_dict_Nx-{Nx}_Ny-{Ny}.pickle', 'rb') as handle:
-    loaded_dict = pickle.load(handle)
+# with open(f'files/data_dict_Nx-{Nx}_Ny-{Ny}.pickle', 'rb') as handle:
+    # loaded_dict = pickle.load(handle)
 
-# sparse_matrix = sparse.load_npz(f'files/sparse_matrix_Nx-{Nx}_Ny-{Ny}.npz')
-rows, cols = zip(*loaded_dict.keys())
-values = list(loaded_dict.values())
-sparse_matrix = sparse.csr_matrix((values, (rows, cols)))
+# rows, cols = zip(*loaded_dict.keys())
+# values = list(loaded_dict.values())
+# sparse_matrix = sparse.csr_matrix((values, (rows, cols)))
+sparse_matrix = sparse.load_npz(f'files/sparse_matrix_Nx-{Nx}_Ny-{Ny}.npz')
 
 # Compute k largest eigenvalues and corresponding eigenvectors
 k = 10  # Number of eigenvalues/vectors to compute
