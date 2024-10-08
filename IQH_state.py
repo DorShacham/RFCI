@@ -22,8 +22,9 @@ def print_sb_state(state,Nx,Ny):
     plt.matshow(np.abs(map))
 
 
-
-def print_mp_state(state,Nx,Ny,mps):
+# for a given @state [Multi-particle state] on lattice @Nx,@Ny print a heatmap of the distribution of electrons.
+# if @saveto is not None should be a path to save location for the heatmap
+def print_mp_state(state,Nx,Ny,mps, saveto = None):
     map = np.zeros((2 * Ny, 2 * Nx), dtype = complex)
     v = np.zeros(mps.N, dtype= complex)
     for index in range(len(state)):
@@ -34,8 +35,15 @@ def print_mp_state(state,Nx,Ny,mps):
         for y in range(Ny):
             map[2 * y ,2 * x] += v[2 * (Ny * x + y)]
             map[2 * y + 1,2 * x + 1] += v[2 * (Ny * x + y) + 1]
+    
+    plt.figure()
     plt.matshow(np.abs(map))
     plt.colorbar()
+    if saveto is None:
+        plt.show()
+    else:
+        plt.savefig(saveto)
+
 
 # calculate the parity of a given permution @perm and reutrn the parity. 
 # @return_sorted_array if True, return the sorted permutaion.
