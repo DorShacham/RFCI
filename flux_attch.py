@@ -48,6 +48,7 @@ def cite_index_2_z(index,mps, Ny):
 ### maybe should use also the subllatice index
 
     z = x + 1j * y
+    # z =  y + 1j * x
     return z
 
 # given a state @state and its @mps of the compact Hilbert space (size of N Choose n) calculate the new state in that space with flux attached.
