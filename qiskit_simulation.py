@@ -34,9 +34,9 @@ from My_vqe import *
 
 # Build the Hamiltonina Operator (with interction) from sparce Pauli strin for a lattice of shape (@Nx, @Ny).
 # If @return_NN = True then return a list of (n1,n2) nearest niegbors for anaztas entanglement.
-def build_qiskit_H(Nx, Ny, interaction_strength = 1e-1, reutrn_NN = True):
+def build_qiskit_H(Nx, Ny, interaction_strength = 1e-1, band_energy = 1, reutrn_NN = True, NNN = False):
     N = 2 * Nx * Ny
-    H = build_H(Nx = Nx, Ny = Ny)
+    H = build_H(Nx = Nx, Ny = Ny, band_energy = band_energy)
     hamiltonian_terms = {}
     # single body
     for i in range(N):
@@ -53,6 +53,20 @@ def build_qiskit_H(Nx, Ny, interaction_strength = 1e-1, reutrn_NN = True):
                     n2 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 1, Ny = Ny)
                     hamiltonian_terms[f"+_{n1} -_{n1} +_{n2} -_{n2}"] = interaction_strength
                     NN.append((n1,n2))
+    if NNN:
+        for x in range(Nx):
+            for y in range(Ny):
+                n1 = cite_2_cite_index(x = x, y = y, sublattice = 0, Ny = Ny)
+                n3 = cite_2_cite_index(x = x, y = y, sublattice = 1, Ny = Ny)
+                for i,j in [(0,1),(0,-1),(1,0),(-1,0)]:
+                    n2 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 0, Ny = Ny)
+                    n4 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 1, Ny = Ny)
+                    hamiltonian_terms[f"+_{n1} -_{n1} +_{n2} -_{n2}"] = interaction_strength
+                    hamiltonian_terms[f"+_{n3} -_{n3} +_{n4} -_{n4}"] = interaction_strength
+                    NN.append((n1,n2))
+                    NN.append((n3,n4))
+
+
             
     hamiltonian_terms = FermionicOp(hamiltonian_terms, num_spin_orbitals=N)
     qubit_converter = JordanWignerMapper()
@@ -145,6 +159,19 @@ def translation_invariant_ansatz(Nx, Ny, reps):
     print(f"Number of parameters after binding: {translation_invariant_ansatz.num_parameters}")
     print(f"Parameter names after binding: {translation_invariant_ansatz.parameters}")
     return translation_invariant_ansatz
+
+
+def print_state_vector(state_vector,Nx,Ny):
+    sv = Statevector(state_vector)
+    N = 2 * Nx * Ny
+    n_cite = lambda cite_index: SparsePauliOp([str("I"*(N - cite_index - 1) + "Z" + "I"*cite_index)],  [1])
+    map = np.zeros((2 * Ny, 2 * Nx), dtype = complex)
+    for x in range((Nx)):
+        for y in range(Ny):
+            map[2 * y,2 * x] = sv.expectation_value(n_cite(2 * (Ny * x + y))) * (-0.5) + 0.5 
+            map[2 * y + 1,2 * x + 1] = sv.expectation_value(n_cite(2 * (Ny * x + y) + 1)) * (-0.5) + 0.5 
+    plt.matshow(np.abs(map))
+    plt.colorbar()
 #%% Testing flux attachments
 # Initialzing state
 # Preparing the Full Hilbert 2^N state
@@ -187,40 +214,48 @@ def translation_invariant_ansatz(Nx, Ny, reps):
 
 #%% VQE
 # Initialzing state
-# Preparing the Full Hilbert 2^N state
-Nx = 3
+# Prearing the Full Hilbert 2^N state
+Nx = 1
 Ny = 3
 # number of electrons - half of the original system
 interaction_strength = 1e-1
-extention_factor = 1
+band_energy = 1e2
+extention_factor = 3
 n = 2 * extention_factor * Nx * Ny // 6
-# n = 2
+# n = 4
 
-state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny,n=n, extention_factor = extention_factor)
+state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny,n=n, extention_factor = extention_factor, band_energy=band_energy)
 
 Nx = extention_factor * Nx
 N = 2 * Nx * Ny
-# state = flux_attch_2_compact_state(state, mps, Ny)
-state_vector = state_2_full_state_vector(state, mps)
+state = flux_attch_2_compact_state(state, mps, Ny)
+init_state_vector = state_2_full_state_vector(state, mps)
 
-qiskit_H, NN = build_qiskit_H(Nx = Nx, Ny = Ny, interaction_strength = interaction_strength, reutrn_NN=True)
+qiskit_H, NN = build_qiskit_H(Nx = Nx, Ny = Ny, interaction_strength = interaction_strength, band_energy = band_energy, reutrn_NN=True, NNN=True)
 
-result = my_estimator(state_vector,QuantumCircuit(N),qiskit_H)
+result = my_estimator(init_state_vector,QuantumCircuit(N),qiskit_H)
 print(f"Expectation value: {result.real}")
-
+print_state_vector(init_state_vector,Nx,Ny)
+# print_mp_state(state,Nx,Ny,mps)
 
 #%%
-# ansatz = ExcitationPreserving(N, reps=1, insert_barriers=False, entanglement=NN,flatten=True)
+# ansatz = ExcitationPreserving(N, reps=1, insert_barriers=False, entanglement=NN,flatten=True, mode='fsim')
 ansatz = translation_invariant_ansatz(Nx, Ny, reps = 1)
-vqe = VQE(initial_state=state_vector, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = 100)
+vqe = VQE(initial_state=init_state_vector, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = 1e2)
 res = vqe.minimize()
 vqe.plot()
 
+state_vector = Statevector(init_state_vector).evolve(ansatz.assign_parameters(res.x)).data
+print_state_vector(state_vector,Nx,Ny)
 #%%
-# state_vector = Statevector(state_vector).evolve(ansatz.assign_parameters(res.x)).data
-state_vector = Statevector(state_vector).evolve(ansatz.assign_parameters(res.x)).evolve(flux_attch_gate(N, mps, Nx, Ny)).data
-qiskit_H= build_qiskit_H(Nx = Nx, Ny = Ny, interaction_strength = 1e-1, reutrn_NN=False)
+# state_vector = Statevector(init_state_vector).evolve(ansatz.assign_parameters(res.x)).data
+state_vector = Statevector(init_state_vector).evolve(ansatz.assign_parameters(res.x)).evolve(flux_attch_gate(N, mps, Nx, Ny)).data
+qiskit_H= build_qiskit_H(Nx = Nx, Ny = Ny, interaction_strength = 1e-1, band_energy=1e2, reutrn_NN=False)
 ansatz = translation_invariant_ansatz(Nx, Ny, reps = 1)
+# ansatz = ExcitationPreserving(N, reps=1, insert_barriers=False, entanglement=NN,flatten=True,mode='fsim')
 vqe = VQE(initial_state=state_vector, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = 1e2)
 res = vqe.minimize()
 vqe.plot()
+
+state_vector = Statevector(state_vector).evolve(ansatz.assign_parameters(res.x)).data
+print_state_vector(state_vector,Nx,Ny)
