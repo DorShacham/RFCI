@@ -1,8 +1,7 @@
-__pycache__/flux_attch.cpython-39.pyc
-__pycache__/IQH_state.cpython-39.pyc
 playground.py
 IQH_state_playground.py
 .DS_Store
-__pycache__/my_vqe.cpython-39.pyc
 files/*
 results/*
+*.pyc
+tmp.py
