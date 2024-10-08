@@ -4,3 +4,4 @@ playground.py
 IQH_state_playground.py
 .DS_Store
 __pycache__/my_vqe.cpython-39.pyc
+files/*
