@@ -69,7 +69,7 @@ def multiprocess_map(func, iterable, max_workers, chunk_size):
 # @k - Number of eigenvalues/vectors to compute. @max_workers - If in multi-proccess mode, max number of workders.
 # If @from_memory True, load sparse matrix from meomory and diagnolize it.
 # return the eigenvalues, eigenvectors and save the results.
-def exact_diagnolization(Nx, Ny, n = None, band_energy = 1, interaction_strength = 1e-1, k = 10, multi_process = True, max_workers = 4, multiprocess_func=None, from_memory = False):
+def exact_diagnolization(Nx, Ny, n = None, band_energy = 1, interaction_strength = 1e-1, k = 10, multi_process = True, max_workers = 6, multiprocess_func=None, from_memory = False):
 
     N = 2 * Nx * Ny
     path = str(f'results/Exact_Diagnolization/Nx-{Nx}_Ny-{Ny}')
@@ -100,7 +100,7 @@ def exact_diagnolization(Nx, Ny, n = None, band_energy = 1, interaction_strength
         if multi_process:
             if multiprocess_func is None:
                 multiprocess_func = multiprocess_map
-            chunk_size = min(len(v) // max_workers, int(4e3))
+            chunk_size = min(len(v) // max_workers, int(1e3))
             results = multiprocess_func(process_index_partial, range(len(v)), max_workers, chunk_size)
         else:
             results = [process_index_partial(index) for index in tqdm(range(len(v)))]
