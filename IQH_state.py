@@ -21,17 +21,19 @@ def print_sb_state(state,Nx,Ny):
             map[2 * y + 1,2 * x + 1] = np.abs(state[2 * (Ny * x + y) + 1])**2
     plt.matshow(np.abs(map))
 
+
+
 def print_mp_state(state,Nx,Ny,mps):
     map = np.zeros((2 * Ny, 2 * Nx), dtype = complex)
+    v = np.zeros(mps.N, dtype= complex)
     for index in range(len(state)):
-        v = np.zeros(mps.N, dtype= complex)
         perm = mps.index_2_perm(index)
         for p in perm:
-            v[p] = np.abs(state[index])**2
-        for x in range((Nx)):
-            for y in range(Ny):
-                map[2 * y ,2 * x] += v[2 * (Ny * x + y)]
-                map[2 * y + 1,2 * x + 1] += v[2 * (Ny * x + y) + 1]
+            v[p] += np.abs(state[index])**2
+    for x in range((Nx)):
+        for y in range(Ny):
+            map[2 * y ,2 * x] += v[2 * (Ny * x + y)]
+            map[2 * y + 1,2 * x + 1] += v[2 * (Ny * x + y) + 1]
     plt.matshow(np.abs(map))
     plt.colorbar()
 
@@ -153,7 +155,7 @@ class Multi_particle_state:
         return new_state
 
 # Create the single body Hamiltonian in real space
-def build_H(Nx = 2, Ny = 2):
+def build_H(Nx = 2, Ny = 2, band_energy = 1):
 # parametrs of the model
     N = Nx * Ny
     M = 0
@@ -170,7 +172,7 @@ def build_H(Nx = 2, Ny = 2):
     Y = np.array(range(Ny)) 
 
     # Kx, Ky = np.meshgrid(kx,ky)
-    def build_h2(kx, ky):
+    def build_h2(kx, ky, band_energy):
         h11 = 2 * t2 * (np.cos(kx) - np.cos(ky)) + M
         h12 = t1 * np.exp(1j * phi) * (1 + np.exp(1j * (ky - kx))) + t1 * t1 * np.exp(-1j * phi) * (np.exp(1j * (ky)) + np.exp(1j * (- kx)))
         h2 = np.matrix([[h11, h12], [np.conjugate(h12), -h11]])
@@ -179,9 +181,9 @@ def build_H(Nx = 2, Ny = 2):
     H_k_list = []
     for kx in Kx:
         for ky in Ky:
-            H_single_particle = build_h2(kx,ky)
+            H_single_particle = build_h2(kx,ky, band_energy)
             eig_val, eig_vec = np.linalg.eigh(H_single_particle)
-            h_flat = H_single_particle / np.abs(eig_val[0])  # flat band limit
+            h_flat = H_single_particle / np.abs(eig_val[0]) * band_energy  # flat band limit
             H_k_list.append(h_flat)
             
     # creaing a block diagonal H_k matrix and dft to real space
@@ -196,19 +198,19 @@ def build_H(Nx = 2, Ny = 2):
 # Creating an Interger Quantum Hall state on a 2 * Nx * Ny lattice and then extend the lattice by extention_factor
 # in the x direction
 # return the state vector, extended_mps
-def create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor):
-    N = Nx * Ny
-    H_real_space = build_H(Nx, Ny)
+def create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor, band_energy = 1):
+    N = 2 * Nx * Ny
+    H_real_space = build_H(Nx, Ny, band_energy)
     eig_val, eig_vec = np.linalg.eigh(H_real_space)
 # eigen states (projected on the lower energies) tensor (state index, real space position with A,B sublattices. 
 # for position x,y sublattice A the index is 2 * (Ny * x + y) + A
     eigen_states = eig_vec[:,:n].T
-# creating the multi particle integer quantum hall state with 2 * N sites and n=N electron (half filled)
-    mps = Multi_particle_state(2 * N, n)
+# creating the multi particle integer quantum hall state with  N sites and n electron (half filled)
+    mps = Multi_particle_state(N, n)
     multi_particle_state_vector = mps.create(eigen_states)
 # Exatend the system on the x axis by adding unequippied cites. @extention_factor is a positive integer describe 
 # how many cites to add i.e N_new = extention_factor * N
-    new_N = 2 * (extention_factor * Nx) * Ny   
+    new_N = extention_factor * N
     extended_mps = Multi_particle_state(N = new_N, n = n)
     extended_state = extended_mps.zero_vector()
 
