@@ -1,4 +1,4 @@
-#%%
+
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import permutations, combinations
@@ -9,7 +9,7 @@ from scipy import sparse
 from scipy.sparse.linalg import eigsh
 import concurrent.futures
 from functools import partial
-import pickle
+import os
 
 
 from IQH_state import *
@@ -60,66 +60,88 @@ def combine_results(results):
                 data_dict[key] = value
     return data_dict
 
-# Main script
-if __name__ == "__main__":
-    # Latice shape
-    Nx = 3
-    Ny = 6
+def multiprocess_map(func, iterable, max_workers, chunk_size):
+    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+        return list(tqdm(executor.map(func, iterable, chunksize=chunk_size), total=len(iterable)))
+
+
+# compute the exact diagonalization of the problem with lattice of size @Nx,@Ny with @n electorn, if not spesficed then n = N //6 (1/3 filling of the lower band),
+# @k - Number of eigenvalues/vectors to compute. @max_workers - If in multi-proccess mode, max number of workders.
+# If @from_memory True, load sparse matrix from meomory and diagnolize it.
+# return the eigenvalues, eigenvectors and save the results.
+def exact_diagnolization(Nx, Ny, n = None, band_energy = 1, interaction_strength = 1e-1, k = 10, multi_process = True, max_workers = 4, multiprocess_func=None, from_memory = False):
+
     N = 2 * Nx * Ny
+    path = str(f'results/Exact_Diagnolization/Nx-{Nx}_Ny-{Ny}')
 
-    # Number of electrons
-    n = N // 6
-    band_energy = 1e2
-    interaction_strength = 1e-1 
+    if not from_memory:
+        # Number of electrons
+        if n is None:
+            n = N // 6
+        
 
-    H_sb = build_H(Nx=Nx, Ny=Ny, band_energy = 1e2)
+        H_sb = build_H(Nx=Nx, Ny=Ny, band_energy = band_energy)
 
-    NN = []
-    for x in range(Nx):
-        for y in range(Ny):
-            n1 = cite_2_cite_index(x=x, y=y, sublattice=0, Ny=Ny)
-            for i in [0,1]:
-                for j in [0,1]:
-                    n2 = cite_2_cite_index(x=(x - i) % Nx, y=(y - j) % Ny, sublattice=1, Ny=Ny)
-                    NN.append((n1,n2))
+        NN = []
+        for x in range(Nx):
+            for y in range(Ny):
+                n1 = cite_2_cite_index(x=x, y=y, sublattice=0, Ny=Ny)
+                for i in [0,1]:
+                    for j in [0,1]:
+                        n2 = cite_2_cite_index(x=(x - i) % Nx, y=(y - j) % Ny, sublattice=1, Ny=Ny)
+                        NN.append((n1,n2))
 
-    mps = Multi_particle_state(N=N, n=n)
-    v = mps.zero_vector()
+        mps = Multi_particle_state(N=N, n=n)
+        v = mps.zero_vector()
 
-    # Prepare partial function with fixed arguments
-    process_index_partial = partial(process_index, mps=mps, H_sb=H_sb, NN=NN, interaction_strength=interaction_strength, N=N)
+        # Prepare partial function with fixed arguments
+        process_index_partial = partial(process_index, mps=mps, H_sb=H_sb, NN=NN, interaction_strength=interaction_strength, N=N)
 
-    # Use ProcessPoolExecutor for multiprocessing
-    with concurrent.futures.ProcessPoolExecutor(max_workers=12) as executor:
-        chunk_size = len(v) // 12  # Adjust chunk size based on your specific case
-        results = list(tqdm(executor.map(process_index_partial, range(len(v)), chunksize=min(chunk_size,int(12e3))), total=len(v)))
+        if multi_process:
+            if multiprocess_func is None:
+                multiprocess_func = multiprocess_map
+            chunk_size = min(len(v) // max_workers, int(4e3))
+            results = multiprocess_func(process_index_partial, range(len(v)), max_workers, chunk_size)
+        else:
+            results = [process_index_partial(index) for index in tqdm(range(len(v)))]
 
-    # Combine results
-    data_dict = combine_results(results)
-    with open(f'files/data_dict_Nx-{Nx}_Ny-{Ny}.pickle', 'wb') as handle:
-        pickle.dump(data_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        # Combine results
+        data_dict = combine_results(results)
 
-    rows, cols = zip(*data_dict.keys())
-    values = list(data_dict.values())
-    sparse_matrix = sparse.csr_matrix((values, (rows, cols)))
-    # sparse.save_npz(f'files/sparse_matrix_Nx-{Nx}_Ny-{Ny}.npz', sparse_matrix)
+        rows, cols = zip(*data_dict.keys())
+        values = list(data_dict.values())
+        sparse_matrix = sparse.csr_matrix((values, (rows, cols)))
+
+        os.makedirs(path, exist_ok=True)
+        sparse.save_npz(path + str('/sparse_matrix.npz'), sparse_matrix)
+
+    else: # loading from memory
+        sparse_matrix = sparse.load_npz(path + str('/sparse_matrix.npz'))
 
 
-    # Compute k largest eigenvalues and corresponding eigenvectors
-    k = 10  # Number of eigenvalues/vectors to compute
     eigenvalues, eigenvectors = eigsh(sparse_matrix, k=k, which='SA')
-
-    eigenvalues = np.array(eigenvalues) 
-    print(sorted(eigenvalues))
+    
+    eigen_pairs = list(zip(eigenvalues, eigenvectors.T))
+    eigen_pairs.sort(key=lambda x: x[0])
+    eigenvalues, eigenvectors = zip(*eigen_pairs)
+    eigenvalues = np.array(eigenvalues)
+    eigenvectors = np.array(eigenvectors).T  # Transpose back to original shape
 
     plt.figure()
     plt.plot(np.ones(len(eigenvalues)), eigenvalues, ".")
-    plt.show()
+    plt.savefig(path + str('/eigenvalues.jpg'))
 
-    print_mp_state(eigenvectors[:,0],Nx,Ny,mps)
-    print_mp_state(eigenvectors[:,1],Nx,Ny,mps)
-    print_mp_state(eigenvectors[:,2],Nx,Ny,mps)
-    print_mp_state(eigenvectors[:,3],Nx,Ny,mps)
+    print_mp_state(eigenvectors[:,0],Nx,Ny,mps,saveto= path + str("/ev0.jpg"))
+    print_mp_state(eigenvectors[:,1],Nx,Ny,mps,saveto= path + str("/ev1.jpg"))
+    print_mp_state(eigenvectors[:,2],Nx,Ny,mps,saveto= path + str("/ev2.jpg"))
+    print_mp_state(eigenvectors[:,3],Nx,Ny,mps,saveto= path + str("/ev3.jpg"))
 
-#%%
+    with open(path + str('/data.txt'), 'w') as file:
+        file_dict = {"Nx":Nx, "Ny":Ny, "n":n, "band_energy": band_energy, "interaction_strength":interaction_strength,"eigenvalues":eigenvalues}
+        file.write(str(file_dict))
 
+    return eigenvalues, eigenvectors
+
+
+if __name__ == "__main__":
+    exact_diagnolization()
