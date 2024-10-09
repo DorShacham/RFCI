@@ -160,8 +160,9 @@ def translation_invariant_ansatz(Nx, Ny, reps):
     print(f"Parameter names after binding: {translation_invariant_ansatz.parameters}")
     return translation_invariant_ansatz
 
-
-def print_state_vector(state_vector,Nx,Ny):
+# for a given @state_vecotr on lattice @Nx,@Ny print a heatmap of the distribution of electrons.
+# if @saveto is not None should be a path to save location for the heatmap
+def print_state_vector(state_vector,Nx,Ny, saveto = None):
     sv = Statevector(state_vector)
     N = 2 * Nx * Ny
     n_cite = lambda cite_index: SparsePauliOp([str("I"*(N - cite_index - 1) + "Z" + "I"*cite_index)],  [1])
@@ -170,8 +171,72 @@ def print_state_vector(state_vector,Nx,Ny):
         for y in range(Ny):
             map[2 * y,2 * x] = sv.expectation_value(n_cite(2 * (Ny * x + y))) * (-0.5) + 0.5 
             map[2 * y + 1,2 * x + 1] = sv.expectation_value(n_cite(2 * (Ny * x + y) + 1)) * (-0.5) + 0.5 
+    plt.figure()
     plt.matshow(np.abs(map))
     plt.colorbar()
+    if saveto is None:
+        plt.show()
+    else:
+        plt.savefig(saveto)
+
+def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_anzats = None,saveto = None):
+    # Initialzing state
+    # Prearing the Full Hilbert 2^N state
+    # number of electrons - half of the original system
+    if n is None:
+        n = 2 * extention_factor * Nx * Ny // 6
+
+    state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny,n=n, extention_factor = extention_factor, band_energy=config_list[0]['band_energy'])
+
+    Nx = extention_factor * Nx
+    N = 2 * Nx * Ny
+    init_state_vector = state_2_full_state_vector(state, mps)
+    sv = Statevector(init_state_vector)
+    if pre_anzats is not None:
+        sv = sv.evolve(pre_anzats)
+    
+
+    for i, config_dict in enumerate(config_list):
+        qiskit_H, NN = build_qiskit_H(Nx = Nx, Ny = Ny, interaction_strength = config_dict['interaction_strength'], band_energy = config_dict['band_energy'], reutrn_NN=True, NNN=False)
+        if config_dict['flux_attch']:
+            sv = sv.evolve(flux_attch_gate(N, mps, Nx, Ny))
+
+
+        if config_dict['translation_invariant_ansatz']:
+            ansatz = translation_invariant_ansatz(Nx, Ny, reps = config_dict['anzts_reps'])
+        else:
+            ansatz = ExcitationPreserving(N, reps= config_dict['anzts_reps'], insert_barriers=False, entanglement=NN,flatten=True, mode='fsim')
+        
+        if saveto is not None:
+            path = str(saveto) + str(f'/optimization_{i}')
+            os.makedirs(path, exist_ok=True)
+        else:
+            path = None
+        vqe = VQE(initial_state=sv.data, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = config_dict['maxiter'], saveto = path)
+        res = vqe.minimize()
+        vqe.plot()
+        # calculting initial and final energy
+        i_state = sv.data
+        f_state = sv.evolve(ansatz.assign_parameters(res.x))
+
+        initial_energy = my_estimator(i_state,QuantumCircuit(N),qiskit_H)
+        finial_energy = my_estimator(f_state.data,QuantumCircuit(N),qiskit_H)
+        if saveto is not None:
+            print_state_vector(i_state,Nx,Ny,saveto=str(path) + str('/initial_state.jpg'))
+            print_state_vector(f_state,Nx,Ny,saveto=str(path) + str('/final_state.jpg'))
+            with open(path + str('/data.txt'), 'w') as file:
+                file.write(str(config_dict))
+                file.write(f"\ninitial_energy = {initial_energy.real}")
+                file.write(f"\nfinial_energy = {finial_energy.real}")
+                file.write(f"\noptimization solution = {res}")
+        else:
+            print_state_vector(i_state,Nx,Ny)
+            print_state_vector(f_state,Nx,Ny)
+            print(f"initial_energy = {initial_energy}")
+            print(f"finial_energy = {finial_energy}")
+            print(f"optimization solution = {res}")
+
+        sv = f_state
 #%% Testing flux attachments
 # Initialzing state
 # Preparing the Full Hilbert 2^N state
@@ -213,49 +278,4 @@ def print_state_vector(state_vector,Nx,Ny):
 
 
 #%% VQE
-# Initialzing state
-# Prearing the Full Hilbert 2^N state
-Nx = 1
-Ny = 3
-# number of electrons - half of the original system
-interaction_strength = 1e-1
-band_energy = 1e2
-extention_factor = 3
-n = 2 * extention_factor * Nx * Ny // 6
-# n = 4
 
-state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny,n=n, extention_factor = extention_factor, band_energy=band_energy)
-
-Nx = extention_factor * Nx
-N = 2 * Nx * Ny
-state = flux_attch_2_compact_state(state, mps, Ny)
-init_state_vector = state_2_full_state_vector(state, mps)
-
-qiskit_H, NN = build_qiskit_H(Nx = Nx, Ny = Ny, interaction_strength = interaction_strength, band_energy = band_energy, reutrn_NN=True, NNN=True)
-
-result = my_estimator(init_state_vector,QuantumCircuit(N),qiskit_H)
-print(f"Expectation value: {result.real}")
-print_state_vector(init_state_vector,Nx,Ny)
-# print_mp_state(state,Nx,Ny,mps)
-
-#%%
-# ansatz = ExcitationPreserving(N, reps=1, insert_barriers=False, entanglement=NN,flatten=True, mode='fsim')
-ansatz = translation_invariant_ansatz(Nx, Ny, reps = 1)
-vqe = VQE(initial_state=init_state_vector, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = 1e2)
-res = vqe.minimize()
-vqe.plot()
-
-state_vector = Statevector(init_state_vector).evolve(ansatz.assign_parameters(res.x)).data
-print_state_vector(state_vector,Nx,Ny)
-#%%
-# state_vector = Statevector(init_state_vector).evolve(ansatz.assign_parameters(res.x)).data
-state_vector = Statevector(init_state_vector).evolve(ansatz.assign_parameters(res.x)).evolve(flux_attch_gate(N, mps, Nx, Ny)).data
-qiskit_H= build_qiskit_H(Nx = Nx, Ny = Ny, interaction_strength = 1e-1, band_energy=1e2, reutrn_NN=False)
-ansatz = translation_invariant_ansatz(Nx, Ny, reps = 1)
-# ansatz = ExcitationPreserving(N, reps=1, insert_barriers=False, entanglement=NN,flatten=True,mode='fsim')
-vqe = VQE(initial_state=state_vector, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = 1e2)
-res = vqe.minimize()
-vqe.plot()
-
-state_vector = Statevector(state_vector).evolve(ansatz.assign_parameters(res.x)).data
-print_state_vector(state_vector,Nx,Ny)

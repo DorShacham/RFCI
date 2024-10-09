@@ -7,13 +7,15 @@ from qiskit.primitives import BackendEstimatorV2
 from qiskit_aer import AerSimulator, QasmSimulator
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qiskit.quantum_info import Statevector
+import pickle
 
 
 # VQE impliminatation: taking @ansatz @hamiltonian and find paramters 
 # for the @ansatz that minimizes the @hamiltonian expection value according to my_estimator.
 # @initial_state is the state of the quantum ciricut before the anzats
+# if @saveto - is not None, save the result of the optimization and graph to this addres
 class VQE:
-    def __init__(self, initial_state ,ansatz,hamiltonian, maxiter = 1e5):
+    def __init__(self, initial_state ,ansatz,hamiltonian, maxiter = 1e5, saveto = None):
         self.initial_state = initial_state
         self.ansatz = ansatz
         self.hamiltonian = hamiltonian
@@ -24,6 +26,7 @@ class VQE:
         }
         self.maxiter = maxiter
         self.res = None
+        self.path = saveto
 
 # calculate the cost_function - the expection value of self.hamiltonian according to self.estimator
 # with self.anzats(@params)
@@ -68,6 +71,10 @@ class VQE:
         )
         print(res)
         self.res = res
+        if self.path is not None:
+            with open(str(self.path) + str('/res.pickle'), 'wb') as handle:
+                pickle.dump(res, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
         return res
 
 # plot cost function as a function of iterations.
@@ -77,6 +84,8 @@ class VQE:
         plt.xlabel("Iterations")
         plt.ylabel("Cost")
         plt.draw()
+        if self.path is not None:
+            plt.savefig(str(self.path) + str('/optimzation_plot.jpg'))
 
 
 # Calculate the expection value of @operator on final state from @qc with @initial_state
