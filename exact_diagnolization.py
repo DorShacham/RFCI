@@ -10,6 +10,10 @@ from scipy.sparse.linalg import eigsh
 import concurrent.futures
 from functools import partial
 import os
+import gc
+from collections import ChainMap
+
+
 
 
 from IQH_state import *
@@ -49,17 +53,6 @@ def process_index(index,mps, H_sb, NN, interaction_strength, N):
         return None
 
 
-
-def combine_results(results):
-    data_dict = {}
-    for result in results:
-        for key, value in result.items():
-            if key in data_dict:
-                data_dict[key] += value
-            else:
-                data_dict[key] = value
-    return data_dict
-
 def multiprocess_map(func, iterable, max_workers, chunk_size):
     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
         return list(tqdm(executor.map(func, iterable, chunksize=chunk_size), total=len(iterable)))
@@ -71,13 +64,14 @@ def multiprocess_map(func, iterable, max_workers, chunk_size):
 # return the eigenvalues, eigenvectors and save the results.
 def exact_diagnolization(Nx, Ny, n = None, band_energy = 1, interaction_strength = 1e-1, k = 10, multi_process = True, max_workers = 6, multiprocess_func=None, from_memory = False):
 
-    N = 2 * Nx * Ny
     path = str(f'results/Exact_Diagnolization/Nx-{Nx}_Ny-{Ny}')
-
+    N = 2 * Nx * Ny
+    if n is None:
+        n = N // 6
+    mps = Multi_particle_state(N=N, n=n)
     if not from_memory:
         # Number of electrons
-        if n is None:
-            n = N // 6
+        
         
 
         H_sb = build_H(Nx=Nx, Ny=Ny, band_energy = band_energy)
@@ -91,7 +85,7 @@ def exact_diagnolization(Nx, Ny, n = None, band_energy = 1, interaction_strength
                         n2 = cite_2_cite_index(x=(x - i) % Nx, y=(y - j) % Ny, sublattice=1, Ny=Ny)
                         NN.append((n1,n2))
 
-        mps = Multi_particle_state(N=N, n=n)
+        
         v = mps.zero_vector()
 
         # Prepare partial function with fixed arguments
@@ -100,17 +94,23 @@ def exact_diagnolization(Nx, Ny, n = None, band_energy = 1, interaction_strength
         if multi_process:
             if multiprocess_func is None:
                 multiprocess_func = multiprocess_map
-            chunk_size = min(len(v) // max_workers, int(1e3))
+            chunk_size = min(len(v) // max_workers, int(1e4))
             results = multiprocess_func(process_index_partial, range(len(v)), max_workers, chunk_size)
         else:
             results = [process_index_partial(index) for index in tqdm(range(len(v)))]
 
+        print("Got 1")
         # Combine results
-        data_dict = combine_results(results)
-
+        data_dict = dict(ChainMap(*results))
+        gc.collect()
+        print("Got 2")
         rows, cols = zip(*data_dict.keys())
         values = list(data_dict.values())
+        print("Got 3")
+        # del data_dict
+        gc.collect()
         sparse_matrix = sparse.csr_matrix((values, (rows, cols)))
+        print("Got 4")
 
         os.makedirs(path, exist_ok=True)
         sparse.save_npz(path + str('/sparse_matrix.npz'), sparse_matrix)
