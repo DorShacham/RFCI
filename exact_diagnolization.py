@@ -62,7 +62,7 @@ def multiprocess_map(func, iterable, max_workers, chunk_size):
 # @k - Number of eigenvalues/vectors to compute. @max_workers - If in multi-proccess mode, max number of workders.
 # If @from_memory True, load sparse matrix from meomory and diagnolize it.
 # return the eigenvalues, eigenvectors and save the results.
-def exact_diagnolization(Nx, Ny, n = None, band_energy = 1, interaction_strength = 1e-1, k = 10, multi_process = True, max_workers = 6, multiprocess_func=None, from_memory = False):
+def exact_diagnolization(Nx, Ny, n = None, band_energy = 1, interaction_strength = 1e-1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0  ,k = 10, multi_process = True, max_workers = 6, multiprocess_func=None, from_memory = False, save_result = True, show_result = True):
 
     path = str(f'results/Exact_Diagnolization/Nx-{Nx}_Ny-{Ny}')
     N = 2 * Nx * Ny
@@ -74,7 +74,7 @@ def exact_diagnolization(Nx, Ny, n = None, band_energy = 1, interaction_strength
         
         
 
-        H_sb = build_H(Nx=Nx, Ny=Ny, band_energy = band_energy)
+        H_sb = build_H(Nx=Nx, Ny=Ny, band_energy = band_energy, phi=phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y)
 
         NN = []
         for x in range(Nx):
@@ -99,21 +99,16 @@ def exact_diagnolization(Nx, Ny, n = None, band_energy = 1, interaction_strength
         else:
             results = [process_index_partial(index) for index in tqdm(range(len(v)))]
 
-        print("Got 1")
         # Combine results
-        data_dict = dict(ChainMap(*results))
-        gc.collect()
-        print("Got 2")
+        # data_dict = dict(ChainMap(*results))
+        data_dict =  {k: v for d in results for k, v in d.items()}
         rows, cols = zip(*data_dict.keys())
         values = list(data_dict.values())
-        print("Got 3")
-        # del data_dict
-        gc.collect()
         sparse_matrix = sparse.csr_matrix((values, (rows, cols)))
-        print("Got 4")
 
-        os.makedirs(path, exist_ok=True)
-        sparse.save_npz(path + str('/sparse_matrix.npz'), sparse_matrix)
+        if save_result:
+            os.makedirs(path, exist_ok=True)
+            sparse.save_npz(path + str('/sparse_matrix.npz'), sparse_matrix)
 
     else: # loading from memory
         sparse_matrix = sparse.load_npz(path + str('/sparse_matrix.npz'))
@@ -127,18 +122,26 @@ def exact_diagnolization(Nx, Ny, n = None, band_energy = 1, interaction_strength
     eigenvalues = np.array(eigenvalues)
     eigenvectors = np.array(eigenvectors).T  # Transpose back to original shape
 
-    plt.figure()
-    plt.plot(np.ones(len(eigenvalues)), eigenvalues, ".")
-    plt.savefig(path + str('/eigenvalues.jpg'))
+    if show_result or save_result:
+        plt.figure()
+        plt.plot(np.ones(len(eigenvalues)), eigenvalues, ".")
+    if save_result:
+        plt.savefig(path + str('/eigenvalues.jpg'))
+        print_mp_state(eigenvectors[:,0],Nx,Ny,mps,saveto= path + str("/ev0.jpg"))
+        print_mp_state(eigenvectors[:,1],Nx,Ny,mps,saveto= path + str("/ev1.jpg"))
+        print_mp_state(eigenvectors[:,2],Nx,Ny,mps,saveto= path + str("/ev2.jpg"))
+        print_mp_state(eigenvectors[:,3],Nx,Ny,mps,saveto= path + str("/ev3.jpg"))
+        
+        with open(path + str('/data.txt'), 'w') as file:
+            file_dict = {"Nx":Nx, "Ny":Ny, "n":n, "band_energy": band_energy, "interaction_strength":interaction_strength,"eigenvalues":eigenvalues}
+            file.write(str(file_dict))
+    elif show_result:
+        print_mp_state(eigenvectors[:,0],Nx,Ny,mps,saveto= None)
+        print_mp_state(eigenvectors[:,1],Nx,Ny,mps,saveto= None)
+        print_mp_state(eigenvectors[:,2],Nx,Ny,mps,saveto= None)
+        print_mp_state(eigenvectors[:,3],Nx,Ny,mps,saveto= None)
 
-    print_mp_state(eigenvectors[:,0],Nx,Ny,mps,saveto= path + str("/ev0.jpg"))
-    print_mp_state(eigenvectors[:,1],Nx,Ny,mps,saveto= path + str("/ev1.jpg"))
-    print_mp_state(eigenvectors[:,2],Nx,Ny,mps,saveto= path + str("/ev2.jpg"))
-    print_mp_state(eigenvectors[:,3],Nx,Ny,mps,saveto= path + str("/ev3.jpg"))
-
-    with open(path + str('/data.txt'), 'w') as file:
-        file_dict = {"Nx":Nx, "Ny":Ny, "n":n, "band_energy": band_energy, "interaction_strength":interaction_strength,"eigenvalues":eigenvalues}
-        file.write(str(file_dict))
+    
 
     return eigenvalues, eigenvectors
 
