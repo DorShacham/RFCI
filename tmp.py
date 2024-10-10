@@ -1,86 +1,21 @@
 #%%
-from qiskit.circuit.library import ExcitationPreserving
-from qiskit.circuit import ParameterVector
-import numpy as np
-from IPython.display import Image,display
+from exact_diagnolization import *
+from qiskit_simulation import *
 
-from flux_attch import *
-
-# translate the cite @index = 2 * (Ny * x + y) + sublattice -> z = x + iy
-def cite_index_2_z(index,mps, Ny):
-    sublattice = index % 2 
-    y = (index // 2 ) % Ny
-    x = index // (2 * Ny)
-### maybe should use also the subllatice index
-
-Nx = 2
-Ny = 2
-N = 2 * Nx * Ny
-
-NN = []
-for x in range(Nx):
-    for y in range(Ny):
-        n1 = cite_2_cite_index(x = x, y = y, sublattice = 0, Ny = Ny)
-        for i in [0,1]:
-            for j in [0,1]:
-                n2 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 1, Ny = Ny)
-                NN.append((n1,n2))
-
-# 1. Create the ExcitationPreserving ansatz
-num_qubits = N
-reps = 2
-ansatz = ExcitationPreserving(
-    num_qubits=num_qubits,
-    reps=reps,
-    entanglement=NN,
-    mode='fsim',
-    insert_barriers=True,
-    flatten=False
-)
-display(ansatz.decompose().draw('mpl'))
-
-
-# 2. Analyze the parameter structure
-print(f"Number of parameters: {ansatz.num_parameters}")
-print(f"Parameter names: {ansatz.parameters}")
+if __name__ == "__main__":
+    # eigenvalues, eigenvectors = exact_diagnolization(Nx=6, Ny=3, multi_process=True, max_workers=10, multiprocess_func=multiprocess_map,from_memory=False)
+    Nx = 1
+    Ny = 3
+    extention_factor = 3
+    saving_path = str(f"results/vqe_simulation/Nx-{Nx}_Ny-{Ny}_EF-{extention_factor}")
+    config1 = {"band_energy": 1e0, "interaction_strength": 0, "translation_invariant_ansatz": False, "anzts_reps": 3, "flux_attch": True, "maxiter": 9e2, "NNN": True}
+    # config2 = {"band_energy": 1e0, "interaction_strength": 1e-1, "translation_invariant_ansatz": False, "anzts_reps": 3, "flux_attch": False, "maxiter": 5e2,  "NNN": False}
+    # config3 = {"band_energy": 1e0, "interaction_strength": 1e-1, "translation_invariant_ansatz": False, "anzts_reps": 3, "flux_attch": False, "maxiter": 1e2,  "NNN": False}
+    # config_list = [config1,config2,config3]
+    config_list = [config1,config2]
+    vqe_simulation(Nx = Nx, Ny = Ny, config_list = config_list, n = None, extention_factor = extention_factor , pre_anzats = None,saveto = saving_path)
+    
 #%%
-# 3. Create a custom parameter binding
-# Determine the number of unique parameters per repetition
-old_parm_per_rep = N + len(NN) * 2
-param_per_single_qubit = 2 # 2 cites in cell
-param_per_NN = 2 * 2 # there are 4 NN, out of which there is reflection invaraince in both direction meaning only 2 uniqe directions. The other 2 is becuase the anzats use 2 params per pair.
-parm_per_rep = param_per_single_qubit + param_per_NN
-num_of_params = parm_per_rep * reps + param_per_single_qubit
-# Create a ParameterVector for the unique parameters
-unique_params = ParameterVector('θ', num_of_params)
-
-# 4. Bind the parameters to achieve translation invariance
-param_dict = {}
-for rep in range(reps):
-    for i in range(N):
-        sublattice = i % 2
-        param_dict[ansatz.parameters[i + old_parm_per_rep * rep]] = unique_params[sublattice + parm_per_rep * rep]
-    for i in range(len(NN) // 4):
-        param_dict[ansatz.parameters[0 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[0 + param_per_single_qubit + parm_per_rep * rep]
-        param_dict[ansatz.parameters[1 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[1 + param_per_single_qubit + parm_per_rep * rep]
-        
-        param_dict[ansatz.parameters[2 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[2 + param_per_single_qubit + parm_per_rep * rep]
-        param_dict[ansatz.parameters[3 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[3 + param_per_single_qubit + parm_per_rep * rep]
-        param_dict[ansatz.parameters[4 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[2 + param_per_single_qubit + parm_per_rep * rep]
-        param_dict[ansatz.parameters[5 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[3 + param_per_single_qubit + parm_per_rep * rep]
-
-        param_dict[ansatz.parameters[6 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[0 + param_per_single_qubit + parm_per_rep * rep]
-        param_dict[ansatz.parameters[7 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[1 + param_per_single_qubit + parm_per_rep * rep]
-# final rotation
-for i in range(N):
-        sublattice = i % 2
-        param_dict[ansatz.parameters[i + old_parm_per_rep * reps]] = unique_params[sublattice + parm_per_rep * reps]
-
-# Bind the parameters
-translation_invariant_ansatz = ansatz.assign_parameters(param_dict)
-
-print(f"Number of parameters after binding: {translation_invariant_ansatz.num_parameters}")
-print(f"Parameter names after binding: {translation_invariant_ansatz.parameters}")
-
-# Visualize the circuit (optional)
-display(translation_invariant_ansatz.decompose().draw('mpl'))
+import numpy as np
+e = np.array(sorted([-5.95450488, -5.95446248, -5.95446248, -5.94610191, -5.9462678 , -5.94564128, -5.94592613, -5.94626068, -5.94626068, -5.94592613]))
+print(e - np.min(e))
