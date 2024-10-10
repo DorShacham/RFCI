@@ -163,11 +163,11 @@ class Multi_particle_state:
         return new_state
 
 # Create the single body Hamiltonian in real space
-def build_H(Nx = 2, Ny = 2, band_energy = 1):
+def build_H(Nx = 2, Ny = 2, band_energy = 1, phi = np.pi/4, phase_shift_x = 0, phase_shift_y = 0):
 # parametrs of the model
     N = Nx * Ny
     M = 0
-    phi = np.pi/4
+    # phi = np.pi/4
     t1 = 1
     t2 = (2-np.sqrt(2))/2
 
@@ -179,7 +179,6 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1):
     X = np.array(range(Nx)) 
     Y = np.array(range(Ny)) 
 
-    # Kx, Ky = np.meshgrid(kx,ky)
     def build_h2(kx, ky, band_energy):
         h11 = 2 * t2 * (np.cos(kx) - np.cos(ky)) + M
         h12 = t1 * np.exp(1j * phi) * (1 + np.exp(1j * (ky - kx))) + t1 * t1 * np.exp(-1j * phi) * (np.exp(1j * (ky)) + np.exp(1j * (- kx)))
@@ -187,12 +186,14 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1):
         return h2
 
     H_k_list = []
+    i = 0
     for kx in Kx:
         for ky in Ky:
-            H_single_particle = build_h2(kx,ky, band_energy)
+            H_single_particle = build_h2(kx - phase_shift_x/Nx,ky - phase_shift_y/Ny, band_energy)
             eig_val, eig_vec = np.linalg.eigh(H_single_particle)
-            h_flat = H_single_particle / np.abs(eig_val[0]) * band_energy  # flat band limit
+            h_flat = H_single_particle / np.abs(eig_val[0]) * band_energy + i * 1e-8  # flat band limit
             H_k_list.append(h_flat)
+            i += 1
             
     # creaing a block diagonal H_k matrix and dft to real space
 
