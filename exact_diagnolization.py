@@ -147,4 +147,4 @@ def exact_diagnolization(Nx, Ny, n = None, band_energy = 1, interaction_strength
 
 
 if __name__ == "__main__":
-    exact_diagnolization()
+    eigenvalues, eigenvectors = exact_diagnolization(Nx=6, Ny=2, multi_process=True, max_workers=10, multiprocess_func=multiprocess_map,from_memory=False)
