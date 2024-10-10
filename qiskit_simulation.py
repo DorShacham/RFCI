@@ -197,7 +197,7 @@ def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_anz
     
 
     for i, config_dict in enumerate(config_list):
-        qiskit_H, NN = build_qiskit_H(Nx = Nx, Ny = Ny, interaction_strength = config_dict['interaction_strength'], band_energy = config_dict['band_energy'], reutrn_NN=True, NNN=False)
+        qiskit_H, NN = build_qiskit_H(Nx = Nx, Ny = Ny, interaction_strength = config_dict['interaction_strength'], band_energy = config_dict['band_energy'], reutrn_NN=True, NNN=config_dict['NNN'])
         if config_dict['flux_attch']:
             sv = sv.evolve(flux_attch_gate(N, mps, Nx, Ny))
 
