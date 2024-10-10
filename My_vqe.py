@@ -66,7 +66,7 @@ class VQE:
             x0,
             args=(),
             method="cobyla",
-            # tol=0.01,
+            tol=0.01,
             options={"maxiter":self.maxiter},
         )
         print(res)
