@@ -1,0 +1,11 @@
+{'band_energy': 1.0, 'interaction_strength': 0.1, 'translation_invariant_ansatz': True, 'anzts_reps': 1, 'flux_attch': False, 'maxiter': 100.0, 'NNN': False}
+initial_energy = -0.14945940230440233
+finial_energy = -0.9766094738173294
+optimization solution =  message: Maximum number of function evaluations has been exceeded.
+ success: False
+  status: 2
+     fun: -0.9766094738173294
+       x: [ 3.619e-01  4.524e-01  1.296e-01 -1.582e-01  2.341e-01
+           -3.553e-01 -7.939e-01  3.478e-01]
+    nfev: 100
+   maxcv: 0.0
