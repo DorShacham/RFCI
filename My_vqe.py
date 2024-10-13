@@ -15,7 +15,7 @@ import pickle
 # @initial_state is the state of the quantum ciricut before the anzats
 # if @saveto - is not None, save the result of the optimization and graph to this addres
 class VQE:
-    def __init__(self, initial_state ,ansatz,hamiltonian, maxiter = 1e5, saveto = None):
+    def __init__(self, initial_state ,ansatz,hamiltonian, maxiter = 1e5, loss = None, cooling_protocol = False, saveto = None):
         self.initial_state = initial_state
         self.ansatz = ansatz
         self.hamiltonian = hamiltonian
@@ -27,6 +27,13 @@ class VQE:
         self.maxiter = maxiter
         self.res = None
         self.path = saveto
+        self.cooling = cooling_protocol
+        
+        if loss is None:
+            self.loss = lambda x: x
+        else:
+            self.loss = loss
+        
 
 # calculate the cost_function - the expection value of self.hamiltonian according to self.estimator
 # with self.anzats(@params)
@@ -53,20 +60,20 @@ class VQE:
         self.cost_history_dict["cost_history"].append(energy)
         print(f"Iters. done: {self.cost_history_dict['iters']} [Current cost: {energy}]")
 
-        return energy
+        return self.loss(energy)
 
 # start the optimization proccess. all data on optimization is saved in self.cost_history_dict
     def minimize(self):
 
-        # x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters)
-        x0 = np.zeros(self.ansatz.num_parameters)
+        x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters)
+        # x0 = np.zeros(self.ansatz.num_parameters)
 
         res = minimize(
             self.cost_func,
             x0,
             args=(),
             method="cobyla",
-            tol=0.01,
+            # tol=0.01,
             options={"maxiter":self.maxiter},
         )
         print(res)

@@ -1,0 +1,11 @@
+{'band_energy': 1, 'interaction_strength': 0.1, 'translation_invariant_ansatz': True, 'anzts_reps': 1, 'flux_attch': True, 'maxiter': 1000, 'NNN': False, 'loss': <function <lambda> at 0x17d827280>, 'cooling_protocol': True}
+initial_energy = -0.3992593825881079
+finial_energy = -0.7396694925986657
+optimization solution =  message: Optimization terminated successfully.
+ success: True
+  status: 1
+     fun: -2.0136273463975778e-09
+       x: [ 9.980e-01  8.654e-02  2.225e-01 -1.690e-02  4.037e-02
+           -1.951e-02 -1.329e-01 -3.453e-02]
+    nfev: 74
+   maxcv: 0.0

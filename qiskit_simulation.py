@@ -212,7 +212,7 @@ def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_anz
             os.makedirs(path, exist_ok=True)
         else:
             path = None
-        vqe = VQE(initial_state=sv.data, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = config_dict['maxiter'], saveto = path)
+        vqe = VQE(initial_state=sv.data, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = config_dict['maxiter'], loss = config_dict['loss'], cooling_protocol = config_dict['cooling_protocol'], saveto = path)
         res = vqe.minimize()
         vqe.plot()
         # calculting initial and final energy
