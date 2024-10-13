@@ -1,0 +1,18 @@
+data:
+  name: RFCI
+  Nx: 3
+  Ny: 3
+  extention_factor: 1
+  n: 
+  id: ''
+
+config1:
+  band_energy: 1
+  interaction_strength: -1000
+  translation_invariant_ansatz: True
+  anzts_reps: 1
+  flux_attch: False
+  maxiter: 100
+  NNN: False
+  loss:
+  cooling_protocol: False
