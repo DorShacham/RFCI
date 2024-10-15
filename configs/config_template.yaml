@@ -4,20 +4,21 @@ data:
   Ny: 3
   extention_factor: 3
   n: 
-  id: 'test'
+  id: 'cooling_test'
 
-resarach_question: '?'
+resarach_question: 'testing new method to find first point'
 
 config1:
   band_energy: 1
   interaction_strength: 0
   translation_invariant_ansatz: False
-  anzts_reps: 2
+  anzts_reps: 1
   flux_attch: False
   maxiter: 1000
   NNN: False
-  loss: !lambda 'x:  x'
-  cooling_protocol: False
+  # loss: !lambda 'x:  -1/np.sqrt(2*np.pi*10) * np.exp(-(x + 2.999)**2 / (2*10**2)) * 100'
+  loss: 
+  cooling_protocol: True
 
 
 

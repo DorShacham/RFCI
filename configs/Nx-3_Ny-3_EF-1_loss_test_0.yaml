@@ -1,0 +1,24 @@
+data:
+  name: RFCI
+  Nx: 1
+  Ny: 3
+  extention_factor: 3
+  n: 
+  id: 'loss_test_0'
+
+resarach_question: 'checking convergences with loss anzats'
+
+config1:
+  band_energy: 1
+  interaction_strength: 0
+  translation_invariant_ansatz: False
+  anzts_reps: 3
+  flux_attch: False
+  maxiter: 1000
+  NNN: False
+  # loss: !lambda 'x:  np.sqrt(2 * np.pi * 1**2) /(np.exp(-(x+3)**2/(2*1)))'
+  loss: !lambda 'x:  x'
+  cooling_protocol: False
+
+
+

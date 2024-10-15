@@ -15,7 +15,7 @@ import pickle
 # @initial_state is the state of the quantum ciricut before the anzats
 # if @saveto - is not None, save the result of the optimization and graph to this addres
 class VQE:
-    def __init__(self, initial_state ,ansatz,hamiltonian, maxiter = 1e5, loss = None, cooling_protocol = False, saveto = None):
+    def __init__(self, initial_state ,ansatz,hamiltonian, maxiter = 1e5, loss = None, cooling_protocol = False, approx_min = None, saveto = None):
         self.initial_state = initial_state
         self.ansatz = ansatz
         self.hamiltonian = hamiltonian
@@ -33,6 +33,9 @@ class VQE:
             self.loss = lambda x: x
         else:
             self.loss = loss
+
+        if cooling_protocol:
+            self.loss = lambda x,c: - 1/np.sqrt(2 * np.pi * c**2) * np.exp (- (x - approx_min)**2 / (2 * c**2)) * 100
         
 
 # calculate the cost_function - the expection value of self.hamiltonian according to self.estimator
@@ -50,23 +53,28 @@ class VQE:
         Returns:
             float: Energy estimate
         """
-        # pub = (self.ansatz, [self.hamiltonian], [params])
-        # result = self.estimator.run(pubs=[pub]).result()
-        # energy = result[0].data.evs[0]
         energy = my_estimator(self.initial_state, self.ansatz.assign_parameters(params), self.hamiltonian).real
 
         self.cost_history_dict["iters"] += 1
         self.cost_history_dict["prev_vector"] = params
         self.cost_history_dict["cost_history"].append(energy)
-        print(f"Iters. done: {self.cost_history_dict['iters']} [Current cost: {energy}]")
 
-        return self.loss(energy)
+        if self.cooling:
+            s = self.cost_history_dict["iters"]
+            c = 100 / (s + 1)**0.6
+            cost = self.loss(energy , c)
+        else:
+            cost = self.loss(energy)
+        
+        print(f"Iters. done: {self.cost_history_dict['iters']} [Current cost: {cost}, energy:{energy}]")
+        return cost
 
 # start the optimization proccess. all data on optimization is saved in self.cost_history_dict
     def minimize(self):
 
         x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters)
         # x0 = np.zeros(self.ansatz.num_parameters)
+
 
         res = minimize(
             self.cost_func,
