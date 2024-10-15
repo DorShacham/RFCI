@@ -14,7 +14,7 @@ config1:
   translation_invariant_ansatz: False
   anzts_reps: 3
   flux_attch: False
-  maxiter: 500
+  maxiter: 250
   NNN: True
   loss:
   cooling_protocol: False
@@ -25,7 +25,7 @@ config2:
   translation_invariant_ansatz: False
   anzts_reps: 3
   flux_attch: True
-  maxiter: 500
+  maxiter: 250
   NNN: False
   loss:
   cooling_protocol: False
