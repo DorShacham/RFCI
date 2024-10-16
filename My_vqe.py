@@ -61,7 +61,7 @@ class VQE:
 
         if self.cooling:
             s = self.cost_history_dict["iters"]
-            c = 100 / (s + 1)**0.6
+            c = 100 / (s + 1)**0.5
             cost = self.loss(energy , c)
         else:
             cost = self.loss(energy)
@@ -72,8 +72,8 @@ class VQE:
 # start the optimization proccess. all data on optimization is saved in self.cost_history_dict
     def minimize(self):
 
-        x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters)
-        # x0 = np.zeros(self.ansatz.num_parameters)
+        # x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters)
+        x0 = np.zeros(self.ansatz.num_parameters)
 
 
         res = minimize(
@@ -81,8 +81,8 @@ class VQE:
             x0,
             args=(),
             method="cobyla",
-            # tol=0.01,
-            options={"maxiter":self.maxiter},
+            # tol=0.00000001,
+            options={"maxiter":self.maxiter, "rhobeg":0.1},
         )
         print(res)
         self.res = res
