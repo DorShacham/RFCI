@@ -1,0 +1,22 @@
+data:
+  name: RFCI
+  Nx: 6
+  Ny: 2
+  extention_factor: 1
+  n: 
+  id: 'translation_invariant_ansatz_1'
+
+resarach_question: 'optimization with flux for invariant ansatz'
+
+
+config1:
+  band_energy: 1
+  interaction_strength: 0.1
+  translation_invariant_ansatz: True
+  anzts_reps: 2
+  flux_attch: True
+  maxiter: 1000
+  NNN: False
+  loss:
+  cooling_protocol: False
+

@@ -1,0 +1,11 @@
+{'band_energy': 1, 'interaction_strength': 0.1, 'translation_invariant_ansatz': True, 'anzts_reps': 1, 'flux_attch': True, 'maxiter': 1000, 'NNN': False, 'loss': None, 'cooling_protocol': True}
+initial_energy = -0.3992593825881079
+finial_energy = -0.23876250296531132
+optimization solution =  message: Optimization terminated successfully.
+ success: True
+  status: 1
+     fun: -8.730517410287542
+       x: [ 2.115e+00  6.333e+00  4.461e+00  1.014e+01  5.053e+00
+            1.363e+01  1.959e+01  2.029e+01]
+    nfev: 437
+   maxcv: 0.0

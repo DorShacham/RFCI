@@ -1,12 +1,12 @@
 data:
   name: RFCI
-  Nx: 3
-  Ny: 3
+  Nx: 6
+  Ny: 2
   extention_factor: 1
   n: 
   id: 'cooling_test_with_flux'
 
-resarach_question: 'testing cooling optimization with flux'
+resarach_question: 'testing cooling optimization with flux for tranlation ivariant'
 
 config1:
   band_energy: 1
