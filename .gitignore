@@ -6,3 +6,5 @@ files/*
 *.pyc
 *.npz
 *.pickle
+wandb
+results/vqe_simulation
