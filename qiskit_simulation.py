@@ -179,7 +179,7 @@ def print_state_vector(state_vector,Nx,Ny, saveto = None):
     else:
         plt.savefig(saveto)
 
-def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_anzats = None,saveto = None):
+def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_anzats = None,saveto = None, log = False):
     # Initialzing state
     # Prearing the Full Hilbert 2^N state
     # number of electrons - half of the original system
@@ -212,7 +212,7 @@ def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_anz
             os.makedirs(path, exist_ok=True)
         else:
             path = None
-        vqe = VQE(initial_state=sv.data, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = config_dict['maxiter'], loss = config_dict['loss'], cooling_protocol = config_dict['cooling_protocol'], approx_min = -n * config_dict['band_energy'], saveto = path)
+        vqe = VQE(initial_state=sv.data, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = config_dict['maxiter'], loss = config_dict['loss'], cooling_protocol = config_dict['cooling_protocol'], approx_min = -n * config_dict['band_energy'], saveto = path, log = log, config_i = i)
         res = vqe.minimize()
         vqe.plot()
         # calculting initial and final energy
@@ -224,6 +224,10 @@ def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_anz
         if saveto is not None:
             print_state_vector(i_state,Nx,Ny,saveto=str(path) + str('/initial_state.jpg'))
             print_state_vector(f_state,Nx,Ny,saveto=str(path) + str('/final_state.jpg'))
+            if log:
+                wandb.log({"Electron Density": wandb.Image(str(path) + str('/initial_state.jpg'), caption=f"Initial state config {i}")})
+                wandb.log({"Electron Density": wandb.Image(str(path) + str('/final_state.jpg'), caption=f"Final state config {i}")})
+
             with open(path + str('/data.txt'), 'w') as file:
                 file.write(str(config_dict))
                 file.write(f"\ninitial_energy = {initial_energy.real}")
