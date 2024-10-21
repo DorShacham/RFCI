@@ -61,7 +61,7 @@ class VQE:
 
         if self.cooling:
             s = self.cost_history_dict["iters"]
-            c = 100 / (s + 1)**0.6
+            c = 100 / (s + 1)**0.5
             cost = self.loss(energy , c)
         else:
             cost = self.loss(energy)

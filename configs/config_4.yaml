@@ -4,9 +4,9 @@ data:
   Ny: 2
   extention_factor: 3
   n: 
-  id: '1'
+  id: '4.1'
 
-resarach_question: 'given enougth iteration of spreading and then flux inserting will it convege with out interaction at first?'
+resarach_question: 'is 2 iteration enougth? and then flux attach 2 and then long optimization'
 
 config1:
   band_energy: 1
@@ -30,5 +30,15 @@ config2:
   loss:
   cooling_protocol: False
 
+config3:
+  band_energy: 1
+  interaction_strength: 0.1
+  translation_invariant_ansatz: False
+  anzts_reps: 1
+  flux_attch: False
+  maxiter: 1000
+  NNN: False
+  loss:
+  cooling_protocol: True
 
 

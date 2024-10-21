@@ -4,9 +4,9 @@ data:
   Ny: 2
   extention_factor: 3
   n: 
-  id: '1'
+  id: '1.1'
 
-resarach_question: 'given enougth iteration of spreading and then flux inserting will it convege with out interaction at first?'
+resarach_question: 'is 2 iteration enougth?'
 
 config1:
   band_energy: 1
