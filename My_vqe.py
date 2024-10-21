@@ -2,20 +2,21 @@
 import numpy as np
 from qiskit.quantum_info import SparsePauliOp
 from scipy.optimize import minimize
+# from qiskit_algorithms.optimizers import SPSA
 import matplotlib.pyplot as plt
 from qiskit.primitives import BackendEstimatorV2
 from qiskit_aer import AerSimulator, QasmSimulator
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qiskit.quantum_info import Statevector
 import pickle
-
+import wandb
 
 # VQE impliminatation: taking @ansatz @hamiltonian and find paramters 
 # for the @ansatz that minimizes the @hamiltonian expection value according to my_estimator.
 # @initial_state is the state of the quantum ciricut before the anzats
 # if @saveto - is not None, save the result of the optimization and graph to this addres
 class VQE:
-    def __init__(self, initial_state ,ansatz,hamiltonian, maxiter = 1e5, loss = None, cooling_protocol = False, approx_min = None, saveto = None):
+    def __init__(self, initial_state ,ansatz,hamiltonian, maxiter = 1e5, loss = None, cooling_protocol = False, approx_min = None, saveto = None, log = False, config_i = None):
         self.initial_state = initial_state
         self.ansatz = ansatz
         self.hamiltonian = hamiltonian
@@ -28,7 +29,9 @@ class VQE:
         self.res = None
         self.path = saveto
         self.cooling = cooling_protocol
-        
+        self.log = log
+        self.config_i = config_i
+
         if loss is None:
             self.loss = lambda x: x
         else:
@@ -66,29 +69,46 @@ class VQE:
         else:
             cost = self.loss(energy)
         
-        print(f"Iters. done: {self.cost_history_dict['iters']} [Current cost: {cost}, energy:{energy}]")
+        if self.log:
+            wandb.log(
+                {
+                    f'Energy_config_{self.config_i}': energy,
+                    f'Cost_config_{self.config_i}': cost
+                }
+            )
+        else:
+            print(f"Iters. done: {self.cost_history_dict['iters']} [Current cost: {cost}, energy:{energy}]")
         return cost
 
 # start the optimization proccess. all data on optimization is saved in self.cost_history_dict
     def minimize(self):
 
-        x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters)
-        # x0 = np.zeros(self.ansatz.num_parameters)
+        # x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters)
+        x0 = np.zeros(self.ansatz.num_parameters)
 
 
-        res = minimize(
-            self.cost_func,
-            x0,
-            args=(),
-            method="cobyla",
-            # tol=0.01,
-            options={"maxiter":self.maxiter},
-        )
+        # res = minimize(
+        #     self.cost_func,
+        #     x0,
+        #     args=(),
+        #     # method="cobyla",
+        #     method="SLSQP",
+        #     # tol=0.00000001,
+        #     options={"maxiter":self.maxiter, "rhobeg":0.1},
+        # )
+        spsa = SPSA(maxiter=300)
+        res = spsa.minimize(self.cost_func, x0=initial_point)
+
         print(res)
         self.res = res
         if self.path is not None:
             with open(str(self.path) + str('/res.pickle'), 'wb') as handle:
                 pickle.dump(res, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            if self.log:
+                artifact = wandb.Artifact(f'model_weights_config_{self.config_i}', type='model')
+                artifact.add_file(str(self.path) + str('/res.pickle'))
+                # Log the artifact
+                wandb.log_artifact(artifact)
 
         return res
 

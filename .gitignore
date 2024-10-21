@@ -6,3 +6,7 @@ files/*
 *.pyc
 *.npz
 *.pickle
+wandb
+results/vqe_simulation
+configs/config_temp.yaml
+tmp2.py

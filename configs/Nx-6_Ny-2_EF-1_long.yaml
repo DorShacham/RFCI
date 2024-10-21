@@ -1,21 +1,22 @@
 data:
   name: RFCI
-  Nx: 3
-  Ny: 3
+  Nx: 6
+  Ny: 2
   extention_factor: 1
   n: 
-  id: 
+  id: 'translation_invariant_ansatz_1'
 
-resarach_question: 'wandb test'
+resarach_question: 'optimization with flux for invariant ansatz'
+
 
 config1:
   band_energy: 1
   interaction_strength: 0.1
   translation_invariant_ansatz: True
-  anzts_reps: 1
+  anzts_reps: 2
   flux_attch: True
-  maxiter: 2
+  maxiter: 1000
   NNN: False
-  # loss: !lambda 'x:  -1/np.sqrt(2*np.pi*10) * np.exp(-(x + 2.999)**2 / (2*10**2)) * 100'
-  loss: 
+  loss:
   cooling_protocol: False
+
