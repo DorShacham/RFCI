@@ -2,6 +2,7 @@
 import numpy as np
 from qiskit.quantum_info import SparsePauliOp
 from scipy.optimize import minimize
+# from qiskit_algorithms.optimizers import SPSA
 import matplotlib.pyplot as plt
 from qiskit.primitives import BackendEstimatorV2
 from qiskit_aer import AerSimulator, QasmSimulator
@@ -86,14 +87,18 @@ class VQE:
         x0 = np.zeros(self.ansatz.num_parameters)
 
 
-        res = minimize(
-            self.cost_func,
-            x0,
-            args=(),
-            method="cobyla",
-            # tol=0.00000001,
-            options={"maxiter":self.maxiter, "rhobeg":0.1},
-        )
+        # res = minimize(
+        #     self.cost_func,
+        #     x0,
+        #     args=(),
+        #     # method="cobyla",
+        #     method="SLSQP",
+        #     # tol=0.00000001,
+        #     options={"maxiter":self.maxiter, "rhobeg":0.1},
+        # )
+        spsa = SPSA(maxiter=300)
+        res = spsa.minimize(self.cost_func, x0=initial_point)
+
         print(res)
         self.res = res
         if self.path is not None:
