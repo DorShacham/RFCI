@@ -148,7 +148,7 @@ def translation_invariant_ansatz(Nx, Ny, reps):
             # param_dict[ansatz.parameters[6 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[0 + param_per_single_qubit + parm_per_rep * rep]
             # param_dict[ansatz.parameters[7 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[1 + param_per_single_qubit + parm_per_rep * rep]
         for i in range(2 * len(NN)):
-            param_dict[ansatz.parameters[i + N + old_parm_per_rep * rep]] = unique_params[(i % 2) + 2 * (((i + 1) // 2) % 2) +  param_per_single_qubit + parm_per_rep * rep]
+            param_dict[ansatz.parameters[i + N + old_parm_per_rep * rep]] = unique_params[(i % 2) + 2 * ((((i // (2 * len(NN) // 4)) + 1) // 2) % 2) +  param_per_single_qubit + parm_per_rep * rep]
     # final rotation
     for i in range(N):
             sublattice = i % 2

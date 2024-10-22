@@ -10,3 +10,4 @@ wandb
 results/vqe_simulation
 configs/config_temp.yaml
 tmp2.py
+configs/config_temp2.yaml

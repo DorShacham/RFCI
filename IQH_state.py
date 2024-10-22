@@ -48,6 +48,7 @@ def print_mp_state(state,Nx,Ny,mps, saveto = None):
         plt.show()
     else:
         plt.savefig(saveto)
+    plt.close()
 
 def print_state_vector(state_vector,Nx,Ny, saveto = None):
     sv = Statevector(state_vector)
@@ -65,6 +66,7 @@ def print_state_vector(state_vector,Nx,Ny, saveto = None):
         plt.show()
     else:
         plt.savefig(saveto)
+    plt.close()
 
 
 
