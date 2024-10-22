@@ -11,12 +11,14 @@ from qiskit.quantum_info import Statevector
 import pickle
 import wandb
 
+from IQH_state import print_state_vector
+
 # VQE impliminatation: taking @ansatz @hamiltonian and find paramters 
 # for the @ansatz that minimizes the @hamiltonian expection value according to my_estimator.
 # @initial_state is the state of the quantum ciricut before the anzats
 # if @saveto - is not None, save the result of the optimization and graph to this addres
 class VQE:
-    def __init__(self, initial_state ,ansatz,hamiltonian, maxiter = 1e5, loss = None, cooling_protocol = False, approx_min = None, saveto = None, log = False, config_i = None):
+    def __init__(self,Nx, Ny, initial_state ,ansatz,hamiltonian, config, approx_min = None, saveto = None, log = False, config_i = None):
         self.initial_state = initial_state
         self.ansatz = ansatz
         self.hamiltonian = hamiltonian
@@ -25,19 +27,20 @@ class VQE:
             "iters": 0,
             "cost_history": [],
         }
-        self.maxiter = maxiter
+        self.config = config
+        self.Nx = Nx
+        self.Ny = Ny
         self.res = None
         self.path = saveto
-        self.cooling = cooling_protocol
         self.log = log
         self.config_i = config_i
 
-        if loss is None:
+        if config['loss'] is None:
             self.loss = lambda x: x
         else:
-            self.loss = loss
+            self.loss = config['loss']
 
-        if cooling_protocol:
+        if config['cooling_protocol']:
             self.loss = lambda x,c: - 1/np.sqrt(2 * np.pi * c**2) * np.exp (- (x - approx_min)**2 / (2 * c**2)) * 100
         
 
@@ -62,7 +65,7 @@ class VQE:
         self.cost_history_dict["prev_vector"] = params
         self.cost_history_dict["cost_history"].append(energy)
 
-        if self.cooling:
+        if self.config['cooling_protocol']:
             s = self.cost_history_dict["iters"]
             c = 100 / (s + 1)**0.5
             cost = self.loss(energy , c)
@@ -78,26 +81,34 @@ class VQE:
             )
         else:
             print(f"Iters. done: {self.cost_history_dict['iters']} [Current cost: {cost}, energy:{energy}]")
+
+        if (self.config["cktp_iters"] is not None) and  (self.cost_history_dict["iters"] % self.config["cktp_iters"] == 0) and self.log:
+            print_state_vector(Statevector(self.initial_state).evolve(self.ansatz.assign_parameters(params)).data, self.Nx, self.Ny, saveto=str(self.path) + str(f'/electron_density_{self.cost_history_dict["iters"]}.jpg'))
+            wandb.log({"Electron Density": wandb.Image(str(self.path) + str(f'/electron_density_{self.cost_history_dict["iters"]}.jpg'), caption=f"Config {self.config_i} iter {self.cost_history_dict['iters']}")}, commit = False) 
+            print("Hey")
         return cost
 
 # start the optimization proccess. all data on optimization is saved in self.cost_history_dict
     def minimize(self):
 
-        # x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters)
-        x0 = np.zeros(self.ansatz.num_parameters)
+        x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters)
+        # x0 = np.zeros(self.ansatz.num_parameters)
 
-
-        # res = minimize(
-        #     self.cost_func,
-        #     x0,
-        #     args=(),
-        #     # method="cobyla",
-        #     method="SLSQP",
-        #     # tol=0.00000001,
-        #     options={"maxiter":self.maxiter, "rhobeg":0.1},
-        # )
-        spsa = SPSA(maxiter=300)
-        res = spsa.minimize(self.cost_func, x0=initial_point)
+        if self.config['optimizer'] == 'SPSA':
+            spsa = SPSA(maxiter=300)
+            res = spsa.minimize(self.cost_func, x0=initial_point)
+        else:
+            res = minimize(
+                self.cost_func,
+                x0,
+                args=(),
+                method=self.config['optimizer'],
+                # method="cobyla",
+                # method="SLSQP",
+                # tol=0.00000001,
+                # options={"maxiter":self.config['maxiter'], "rhobeg":0.1},
+                options={"maxiter":self.config['maxiter']},
+            )
 
         print(res)
         self.res = res

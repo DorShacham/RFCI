@@ -4,6 +4,11 @@ from itertools import permutations, combinations
 from scipy.linalg import block_diag,dft,expm
 from tqdm import tqdm
 
+from qiskit.quantum_info import SparsePauliOp
+from qiskit.quantum_info import Statevector
+
+
+
 
 # Normalizes @vec
 def normalize(vec):
@@ -43,6 +48,24 @@ def print_mp_state(state,Nx,Ny,mps, saveto = None):
         plt.show()
     else:
         plt.savefig(saveto)
+
+def print_state_vector(state_vector,Nx,Ny, saveto = None):
+    sv = Statevector(state_vector)
+    N = 2 * Nx * Ny
+    n_cite = lambda cite_index: SparsePauliOp([str("I"*(N - cite_index - 1) + "Z" + "I"*cite_index)],  [1])
+    map = np.zeros((2 * Ny, 2 * Nx), dtype = complex)
+    for x in range((Nx)):
+        for y in range(Ny):
+            map[2 * y,2 * x] = sv.expectation_value(n_cite(2 * (Ny * x + y))) * (-0.5) + 0.5 
+            map[2 * y + 1,2 * x + 1] = sv.expectation_value(n_cite(2 * (Ny * x + y) + 1)) * (-0.5) + 0.5 
+    plt.figure()
+    plt.matshow(np.abs(map))
+    plt.colorbar()
+    if saveto is None:
+        plt.show()
+    else:
+        plt.savefig(saveto)
+
 
 
 # calculate the parity of a given permution @perm and reutrn the parity. 

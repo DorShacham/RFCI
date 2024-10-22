@@ -162,22 +162,6 @@ def translation_invariant_ansatz(Nx, Ny, reps):
 
 # for a given @state_vecotr on lattice @Nx,@Ny print a heatmap of the distribution of electrons.
 # if @saveto is not None should be a path to save location for the heatmap
-def print_state_vector(state_vector,Nx,Ny, saveto = None):
-    sv = Statevector(state_vector)
-    N = 2 * Nx * Ny
-    n_cite = lambda cite_index: SparsePauliOp([str("I"*(N - cite_index - 1) + "Z" + "I"*cite_index)],  [1])
-    map = np.zeros((2 * Ny, 2 * Nx), dtype = complex)
-    for x in range((Nx)):
-        for y in range(Ny):
-            map[2 * y,2 * x] = sv.expectation_value(n_cite(2 * (Ny * x + y))) * (-0.5) + 0.5 
-            map[2 * y + 1,2 * x + 1] = sv.expectation_value(n_cite(2 * (Ny * x + y) + 1)) * (-0.5) + 0.5 
-    plt.figure()
-    plt.matshow(np.abs(map))
-    plt.colorbar()
-    if saveto is None:
-        plt.show()
-    else:
-        plt.savefig(saveto)
 
 def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_anzats = None,saveto = None, log = False):
     # Initialzing state
@@ -212,7 +196,7 @@ def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_anz
             os.makedirs(path, exist_ok=True)
         else:
             path = None
-        vqe = VQE(initial_state=sv.data, ansatz=ansatz, hamiltonian=qiskit_H, maxiter = config_dict['maxiter'], loss = config_dict['loss'], cooling_protocol = config_dict['cooling_protocol'], approx_min = -n * config_dict['band_energy'], saveto = path, log = log, config_i = i)
+        vqe = VQE(initial_state=sv.data, Nx = Nx, Ny = Ny, ansatz=ansatz, hamiltonian=qiskit_H, config = config_dict, approx_min = -n * config_dict['band_energy'], saveto = path, log = log, config_i = i)
         res = vqe.minimize()
         vqe.plot()
         # calculting initial and final energy
@@ -241,45 +225,3 @@ def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_anz
             print(f"optimization solution = {res}")
 
         sv = f_state
-#%% Testing flux attachments
-# Initialzing state
-# Preparing the Full Hilbert 2^N state
-# Nx = 1
-# Ny = 2
-# # number of electrons - half of the original system
-# n = Nx * Ny 
-# extention_factor = 3
-
-# state, mps = create_IQH_in_extendend_lattice(Nx = Nx, Ny = Ny, extention_factor = extention_factor)
-
-# Nx = extention_factor * Nx
-# N = 2 * Nx * Ny
-
-# state_vector = state_2_full_state_vector(state, mps)
-
-
-# qc_init = QuantumCircuit(N)
-# qc_init.initialize(state_vector, range(N))
-# flux_attach = flux_attch_gate(N, mps, Nx, Ny)
-# qc = qc_init.compose(flux_attach)
-
-
-# # Run circit
-
-# simulator = Aer.get_backend('statevector_simulator')
-# # Run and get the result object
-# result = simulator.run(qc).result()
-# new_state_vector = np.array(result.get_statevector())
-
-
-# test_state = flux_attch_2_compact_state(state, mps, Ny)
-# test_state = state_2_full_state_vector(test_state, mps)
-
-# print(np.linalg.norm(new_state_vector - test_state))
-# print(np.linalg.norm(new_state_vector + test_state))
-
-
-
-
-#%% VQE
-
