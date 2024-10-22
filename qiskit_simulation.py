@@ -45,20 +45,20 @@ def build_qiskit_H(Nx, Ny, interaction_strength = 1e-1, band_energy = 1, reutrn_
 
     # interaction and nearest neighbors
     NN = []
-    for x in range(Nx):
-        for y in range(Ny):
-            n1 = cite_2_cite_index(x = x, y = y, sublattice = 0, Ny = Ny)
-            for i in [0,1]:
-                for j in [0,1]:
+    for i in [0,1]:
+        for j in [0,1]:
+            for x in range(Nx):
+                for y in range(Ny):
+                    n1 = cite_2_cite_index(x = x, y = y, sublattice = 0, Ny = Ny)
                     n2 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 1, Ny = Ny)
                     hamiltonian_terms[f"+_{n1} -_{n1} +_{n2} -_{n2}"] = interaction_strength
                     NN.append((n1,n2))
     if NNN:
-        for x in range(Nx):
-            for y in range(Ny):
-                n1 = cite_2_cite_index(x = x, y = y, sublattice = 0, Ny = Ny)
-                n3 = cite_2_cite_index(x = x, y = y, sublattice = 1, Ny = Ny)
-                for i,j in [(0,1),(0,-1),(1,0),(-1,0)]:
+        for i,j in [(0,1),(0,-1),(1,0),(-1,0)]:
+            for x in range(Nx):
+                for y in range(Ny):
+                    n1 = cite_2_cite_index(x = x, y = y, sublattice = 0, Ny = Ny)
+                    n3 = cite_2_cite_index(x = x, y = y, sublattice = 1, Ny = Ny)
                     n2 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 0, Ny = Ny)
                     n4 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 1, Ny = Ny)
                     hamiltonian_terms[f"+_{n1} -_{n1} +_{n2} -_{n2}"] = interaction_strength
@@ -104,14 +104,13 @@ def flux_attch_gate(N, mps, Nx, Ny):
 # For lattice of size @Nx @Ny with @reps
 def translation_invariant_ansatz(Nx, Ny, reps):
     NN = []
-    for x in range(Nx):
-        for y in range(Ny):
-            n1 = cite_2_cite_index(x = x, y = y, sublattice = 0, Ny = Ny)
-            for i in [0,1]:
-                for j in [0,1]:
+    for i in [0,1]:
+        for j in [0,1]:
+            for x in range(Nx):
+                for y in range(Ny):
+                    n1 = cite_2_cite_index(x = x, y = y, sublattice = 0, Ny = Ny)
                     n2 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 1, Ny = Ny)
                     NN.append((n1,n2))
-
     N = 2 * Nx * Ny
     num_qubits = N
     ansatz = ExcitationPreserving(
@@ -137,17 +136,19 @@ def translation_invariant_ansatz(Nx, Ny, reps):
         for i in range(N):
             sublattice = i % 2
             param_dict[ansatz.parameters[i + old_parm_per_rep * rep]] = unique_params[sublattice + parm_per_rep * rep]
-        for i in range(len(NN) // 4):
-            param_dict[ansatz.parameters[0 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[0 + param_per_single_qubit + parm_per_rep * rep]
-            param_dict[ansatz.parameters[1 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[1 + param_per_single_qubit + parm_per_rep * rep]
+        # for i in range(len(NN) // 4):
+            # param_dict[ansatz.parameters[0 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[0 + param_per_single_qubit + parm_per_rep * rep]
+            # param_dict[ansatz.parameters[1 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[1 + param_per_single_qubit + parm_per_rep * rep]
             
-            param_dict[ansatz.parameters[2 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[2 + param_per_single_qubit + parm_per_rep * rep]
-            param_dict[ansatz.parameters[3 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[3 + param_per_single_qubit + parm_per_rep * rep]
-            param_dict[ansatz.parameters[4 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[2 + param_per_single_qubit + parm_per_rep * rep]
-            param_dict[ansatz.parameters[5 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[3 + param_per_single_qubit + parm_per_rep * rep]
+            # param_dict[ansatz.parameters[2 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[2 + param_per_single_qubit + parm_per_rep * rep]
+            # param_dict[ansatz.parameters[3 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[3 + param_per_single_qubit + parm_per_rep * rep]
+            # param_dict[ansatz.parameters[4 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[2 + param_per_single_qubit + parm_per_rep * rep]
+            # param_dict[ansatz.parameters[5 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[3 + param_per_single_qubit + parm_per_rep * rep]
 
-            param_dict[ansatz.parameters[6 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[0 + param_per_single_qubit + parm_per_rep * rep]
-            param_dict[ansatz.parameters[7 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[1 + param_per_single_qubit + parm_per_rep * rep]
+            # param_dict[ansatz.parameters[6 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[0 + param_per_single_qubit + parm_per_rep * rep]
+            # param_dict[ansatz.parameters[7 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[1 + param_per_single_qubit + parm_per_rep * rep]
+        for i in range(2 * len(NN)):
+            param_dict[ansatz.parameters[i + N + old_parm_per_rep * rep]] = unique_params[(i % 2) + 2 * (((i + 1) // 2) % 2) +  param_per_single_qubit + parm_per_rep * rep]
     # final rotation
     for i in range(N):
             sublattice = i % 2
