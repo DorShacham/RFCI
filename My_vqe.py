@@ -18,7 +18,7 @@ from IQH_state import print_state_vector
 # @initial_state is the state of the quantum ciricut before the anzats
 # if @saveto - is not None, save the result of the optimization and graph to this addres
 class VQE:
-    def __init__(self,Nx, Ny, initial_state ,ansatz,hamiltonian, config, approx_min = None, saveto = None, log = False, config_i = None):
+    def __init__(self,Nx, Ny, initial_state ,ansatz,hamiltonian, config, approx_min = None, saveto = None, log = False, config_i = None, ground_states = None):
         self.initial_state = initial_state
         self.ansatz = ansatz
         self.hamiltonian = hamiltonian
@@ -34,6 +34,7 @@ class VQE:
         self.path = saveto
         self.log = log
         self.config_i = config_i
+        self.ground_states = ground_states
 
         if config['loss'] is None:
             self.loss = lambda x: x
@@ -42,6 +43,7 @@ class VQE:
 
         if config['cooling_protocol']:
             self.loss = lambda x,c: - 1/np.sqrt(2 * np.pi * c**2) * np.exp (- (x - approx_min)**2 / (2 * c**2)) * 100
+
         
 
 # calculate the cost_function - the expection value of self.hamiltonian according to self.estimator
@@ -76,7 +78,7 @@ class VQE:
             wandb.log(
                 {
                     f'Energy_config_{self.config_i}': energy,
-                    f'Cost_config_{self.config_i}': cost
+                    f'Cost_config_{self.config_i}': cost,
                 }
             )
         else:
@@ -85,14 +87,20 @@ class VQE:
         if (self.config["cktp_iters"] is not None) and  (self.cost_history_dict["iters"] % self.config["cktp_iters"] == 0) and self.log:
             print_state_vector(Statevector(self.initial_state).evolve(self.ansatz.assign_parameters(params)).data, self.Nx, self.Ny, saveto=str(self.path) + str(f'/electron_density_{self.cost_history_dict["iters"]}.jpg'))
             wandb.log({"Electron Density": wandb.Image(str(self.path) + str(f'/electron_density_{self.cost_history_dict["iters"]}.jpg'), caption=f"Config {self.config_i} iter {self.cost_history_dict['iters']}")}, commit = False) 
-            print("Hey")
+        
+        if self.ground_states is not None:
+            overlap = sbuspace_probability(Statevector(self.initial_state).evolve(self.ansatz.assign_parameters(params)), subspace = self.ground_states)
+            if self.log:
+                wandb.log({f'Overlap_{self.config_i}': overlap}, commit=False)
+            if self.config['overlap_optimization']:
+                return -overlap
         return cost
 
 # start the optimization proccess. all data on optimization is saved in self.cost_history_dict
     def minimize(self):
 
-        x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters)
-        # x0 = np.zeros(self.ansatz.num_parameters)
+        # x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters)
+        x0 = np.zeros(self.ansatz.num_parameters)
 
         if self.config['optimizer'] == 'SPSA':
             spsa = SPSA(maxiter=300)
@@ -139,3 +147,10 @@ def my_estimator(initial_state,qc,operator):
     sv = Statevector(initial_state)
     sv = sv.evolve(qc)
     return sv.expectation_value(operator)
+
+# Calculate the probatility of @state_vector to be in the subspace spanned by the set @subspace
+def sbuspace_probability(state_vector, subspace):
+    prob = 0
+    for v in subspace:
+        prob += np.abs(state_vector.inner(v)) ** 2
+    return prob

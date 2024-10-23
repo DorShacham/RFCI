@@ -27,7 +27,7 @@ from scipy.linalg import expm
 from IQH_state import *
 from flux_attch import *
 from My_vqe import *
-
+from exact_diagnolization import exact_diagnolization
 
 
 
@@ -122,7 +122,7 @@ def translation_invariant_ansatz(Nx, Ny, reps):
         flatten=True
     )
 
-    old_parm_per_rep = N + len(NN) * 2
+    old_parm_per_rep =  N + len(NN) * 2
     param_per_single_qubit = 2 # 2 cites in cell
     param_per_NN = 2 * 2 # there are 4 NN, out of which there is reflection invaraince in both direction meaning only 2 uniqe directions. The other 2 is becuase the anzats use 2 params per pair.
     parm_per_rep = param_per_single_qubit + param_per_NN
@@ -157,8 +157,8 @@ def translation_invariant_ansatz(Nx, Ny, reps):
     # Bind the parameters
     translation_invariant_ansatz = ansatz.assign_parameters(param_dict)
 
-    print(f"Number of parameters after binding: {translation_invariant_ansatz.num_parameters}")
-    print(f"Parameter names after binding: {translation_invariant_ansatz.parameters}")
+    # print(f"Number of parameters after binding: {translation_invariant_ansatz.num_parameters}")
+    # print(f"Parameter names after binding: {translation_invariant_ansatz.parameters}")
     return translation_invariant_ansatz
 
 # for a given @state_vecotr on lattice @Nx,@Ny print a heatmap of the distribution of electrons.
@@ -177,6 +177,7 @@ def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_anz
     N = 2 * Nx * Ny
     init_state_vector = state_2_full_state_vector(state, mps)
     sv = Statevector(init_state_vector)
+
     if pre_anzats is not None:
         sv = sv.evolve(pre_anzats)
     
@@ -197,7 +198,14 @@ def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_anz
             os.makedirs(path, exist_ok=True)
         else:
             path = None
-        vqe = VQE(initial_state=sv.data, Nx = Nx, Ny = Ny, ansatz=ansatz, hamiltonian=qiskit_H, config = config_dict, approx_min = -n * config_dict['band_energy'], saveto = path, log = log, config_i = i)
+
+        if config_dict['ground_state_degeneracy'] is not None:
+            eigenvalues, eigenvectors = exact_diagnolization(Nx, Ny, band_energy=config_dict['band_energy'], interaction_strength=config_dict['interaction_strength'],k=config_dict['ground_state_degeneracy'],multi_process=False, save_result=False, show_result=False)
+            eigenvectors = [state_2_full_state_vector(v, mps) for v in eigenvectors.T]
+        else:
+            eigenvectors = None
+
+        vqe = VQE(initial_state=sv.data, Nx = Nx, Ny = Ny, ansatz=ansatz, hamiltonian=qiskit_H, config = config_dict, approx_min = -n * config_dict['band_energy'], saveto = path, log = log, config_i = i, ground_states = eigenvectors)
         res = vqe.minimize()
         vqe.plot()
         # calculting initial and final energy
