@@ -98,9 +98,10 @@ class VQE:
 
 # start the optimization proccess. all data on optimization is saved in self.cost_history_dict
     def minimize(self):
-
-        # x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters)
-        x0 = np.zeros(self.ansatz.num_parameters)
+        if self.config['random_initial_parametrs']:
+            x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters)
+        else:
+            x0 = np.zeros(self.ansatz.num_parameters)
 
         if self.config['optimizer'] == 'SPSA':
             spsa = SPSA(maxiter=300)
