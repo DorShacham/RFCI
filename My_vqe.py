@@ -2,7 +2,7 @@
 import numpy as np
 from qiskit.quantum_info import SparsePauliOp
 from scipy.optimize import minimize
-# from qiskit_algorithms.optimizers import SPSA
+from qiskit_algorithxms.optimizers import SPSA
 import matplotlib.pyplot as plt
 from qiskit.primitives import BackendEstimatorV2
 from qiskit_aer import AerSimulator, QasmSimulator
