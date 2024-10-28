@@ -2,7 +2,7 @@
 import numpy as np
 from qiskit.quantum_info import SparsePauliOp
 from scipy.optimize import minimize
-# from qiskit_algorithms.optimizers import SPSA
+from qiskit_algorithms.optimizers import SPSA
 import matplotlib.pyplot as plt
 from qiskit.primitives import BackendEstimatorV2
 from qiskit_aer import AerSimulator, QasmSimulator
@@ -105,7 +105,7 @@ class VQE:
 
         if self.config['optimizer'] == 'SPSA':
             spsa = SPSA(maxiter=300)
-            res = spsa.minimize(self.cost_func, x0=initial_point)
+            res = spsa.minimize(self.cost_func, x0=x0)
         else:
             res = minimize(
                 self.cost_func,
