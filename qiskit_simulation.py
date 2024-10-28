@@ -205,7 +205,11 @@ def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_anz
         else:
             eigenvectors = None
 
-        vqe = VQE(initial_state=sv.data, Nx = Nx, Ny = Ny, ansatz=ansatz, hamiltonian=qiskit_H, config = config_dict, approx_min = -n * config_dict['band_energy'], saveto = path, log = log, config_i = i, ground_states = eigenvectors)
+        if not config_dict['overlap_optimization']:
+            approx_min = -n * config_dict['band_energy']
+        else:
+            approx_min = -1
+        vqe = VQE(initial_state=sv.data, Nx = Nx, Ny = Ny, ansatz=ansatz, hamiltonian=qiskit_H, config = config_dict, approx_min =approx_min, saveto = path, log = log, config_i = i, ground_states = eigenvectors)
         res = vqe.minimize()
         vqe.plot()
         # calculting initial and final energy
