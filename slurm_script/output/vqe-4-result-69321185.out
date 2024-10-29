@@ -1,3 +1,0 @@
-couldn't read file "/usr/local/Modules/libexec/modulecmd.tcl": no such file or directory
-/var/spool/slurmd/job69321185/slurm_script: line 20: nvidia-smi: command not found
-slurmstepd: error: *** JOB 69321185 ON socrates CANCELLED AT 2024-10-15T13:18:11 ***

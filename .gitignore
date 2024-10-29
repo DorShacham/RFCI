@@ -12,3 +12,5 @@ configs/config_temp.yaml
 tmp2.py
 configs/config_temp2.yaml
 slurm_script/output
+tmpfig_0.jpg
+tmpfig.jpg
