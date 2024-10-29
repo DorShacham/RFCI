@@ -16,6 +16,12 @@ from functools import partial
 
 from IQH_state import print_state_vector, normalize
 
+
+class Optimizer_reuslt:
+    def __init__(self,function_value, x):
+        self.function_value = function_value
+        self.x = x
+
 # VQE impliminatation: taking @ansatz @hamiltonian and find paramters 
 # for the @ansatz that minimizes the @hamiltonian expection value according to my_estimator.
 # @initial_state is the state of the quantum ciricut before the anzats
@@ -102,6 +108,9 @@ class VQE:
             )
         elif not for_grad:
             print(f"Iters. done: {self.cost_history_dict['iters']} [Current cost: {cost}, energy:{energy}]")
+
+        print(cost)
+        print(overlap)
         return cost
 
     def my_cost_func(self,params, return_all = False):
@@ -130,7 +139,7 @@ class VQE:
         elif self.config['optimizer'] == 'my_optimizer':
             res = my_optimizer(x = x0,cost_func=self.my_cost_func ,eps=1e-8, step_size=1e-3, approx_min=self.approx_min, log= self.log)
         elif self.config['optimizer'] == 'my_optimizer_V2':
-            res = my_optimizer_V2(x = x0,cost_func=self.my_cost_func ,eps=1e-8, step_size=1e-3, approx_min=self.approx_min, log= self.log)
+            res = my_optimizer_V2(x = x0,cost_func=self.my_cost_func ,eps=1e-8, step_size=1, approx_min=self.approx_min, log= self.log)
         else:
             res = minimize(
                 self.cost_func,
@@ -221,72 +230,104 @@ def my_optimizer(x, cost_func, eps, step_size, approx_min, log):
         x = x - normalize(grad) * step_size 
         current_cost, energy, overlap= cost_func(x, return_all=True)
         current_loss = loss(x,s)
-        log_dict = {"cost": current_cost, "lost": current_loss, "grad_overlap":grad_overlap, "step_size":step_size, "energy": energy, "overlap": overlap}
+        log_dict = {"cost": current_cost, "lost": current_loss, "grad_overlap":grad_overlap, "step_size":step_size, "energy": energy, "overlap": overlap, "s": s}
         if log:
             wandb.log(log_dict)
         else:
             print(log_dict)
     
-    print(f"Optimization Done!\n function min = {cost}")
-    class Struct: pass
-    res = Struct()
-    res.x = x
-    res.fun = current_cost
+    print(f"Optimization Done!\n function min = {current_cost}")
+    res = Optimizer_reuslt(function_value = current_cost,x = x)
     return res
 
 def my_optimizer_V2(x, cost_func, eps, step_size, approx_min, log):
     M = 200
-    l = 1
     s = 1
-    c = lambda s: np.exp((M - s) / l)
-    loss = lambda x,s: 1 * np.exp(-(c(s)  /  (np.exp( 100 * (cost_func(x) - approx_min)) - 1)**2 )**0.05)
+    c = lambda s: np.exp((M - s) / 1)
+    loss = lambda x,s: np.exp( - (c(s) / ( (np.exp( 1e2 * (cost_func(x) - approx_min) ) ) - 1)**2)** 1)
     grad_loss = lambda x,s: approx_fprime(x, loss, eps, s)
     tmp_grad  = grad_loss(x,s)
     current_cost = cost_func(x) 
     current_loss = loss(x,s)
-    while(np.abs(current_cost - approx_min) > 1e-5):
+    grad_step_size = 1e-2
+    counter = 0
+    while(np.abs(current_cost - approx_min) > 1e-4):
         print("\n\nLowering bounds")
-        while(current_loss < 0.4):
+        while(current_loss < 0.5):
             s+= 1
             current_loss = loss(x,s)
     
         grad_overlap_counter = 0
+        direction_vector = np.zeros(len(x))
         print("Finding grad")
-        while(grad_overlap_counter < 10):
+        while(grad_overlap_counter < 5):
+    
             grad  = grad_loss(x,s)
             grad_overlap = np.dot(normalize(tmp_grad),normalize(grad))
             tmp_grad = grad
-            x = x - normalize(grad) * 1e-5 
+            x = x - normalize(grad) * grad_step_size
             current_cost, energy, overlap= cost_func(x, return_all=True)
             current_loss = loss(x,s)
-            log_dict = {"cost": current_cost, "lost": current_loss, "grad_overlap":grad_overlap, "step_size":step_size, "energy": energy, "overlap": overlap}
+            log_dict = {"cost": current_cost, "lost": current_loss, "grad_overlap":grad_overlap, "step_size":step_size, "energy": energy, "overlap": overlap, "s": s}
             if log:
                 wandb.log(log_dict)
             else:
                 print(log_dict)
-        
-            if grad_overlap > 0.999:
+            if np.abs(current_cost - approx_min) < 1e-4:
+                break
+            if grad_overlap > 0.995:
                 grad_overlap_counter += 1
+                direction_vector += grad
             else:
                 grad_overlap_counter = 0
+                direction_vector = np.zeros(len(x))
+                grad_step_size /= 2
+                
         
-        prev_cost = current_cost
-        step_size *= 0.9
-        print("Approching")
-        while(current_cost <= prev_cost):
-            prev_cost = current_cost
-            x = x - normalize(grad) * step_size
-            current_cost, energy, overlap= cost_func(x, return_all=True)
-            current_loss = loss(x,s)
-            log_dict = {"cost": current_cost, "lost": current_loss, "grad_overlap":grad_overlap, "step_size":step_size, "energy": energy, "overlap": overlap}
-            if log:
-                wandb.log(log_dict)
-            else:
-                print(log_dict)
+        direction_vector = normalize(direction_vector)
 
-    print(f"Optimization Done!\n function min = {cost}")
-    class Struct: pass
-    res = Struct()
-    res.x = x
-    res.fun = cost
+        loss_value_list = []
+        cost_value_list = []
+        l_range = range(-10,int(1e3))
+        for l in l_range:
+            loss_value_list.append(loss(x - direction_vector * 1e-2 * l,s))
+            cost_value_list.append(cost_func(x - direction_vector * 1e-2 * l))
+        plt.plot(l_range,loss_value_list)
+        plt.plot(l_range,cost_value_list)
+        plt.grid()
+        plt.savefig(f'tmpfig_{counter}.jpg')
+        counter += 1
+
+        print("Tunning learning rate")
+        while(current_loss >= loss(x - direction_vector * step_size,s)):
+            step_size *= 2
+            print(f"Learing rate:{step_size}, curret_loss: {current_loss}, loss: {loss(x - direction_vector * step_size,s)}")
+        while(current_loss * 2 <= loss(x - direction_vector * step_size,s)):
+            step_size /= 1.1
+            print(f"Learing rate:{step_size}, curret_loss: {current_loss}, loss: {loss(x - direction_vector * step_size,s)}")
+        x = x - direction_vector * step_size / 2 
+        print("Optimize")
+        res = minimize(
+            # lambda l: cost_func(x - direction_vector * step_size * l, return_all=False),
+            lambda l: loss(x - direction_vector * step_size * l,s),
+            0,
+            args=(),
+            # method="cobyla",
+            method="SLSQP",
+            tol=1e-5,
+            options={"maxiter":100, "rhobeg":step_size / 10},
+        )
+        x = x - direction_vector * step_size * res.x
+        current_cost, energy, overlap= cost_func(x, return_all=True)
+        current_loss = loss(x,s)
+        log_dict = {"cost": current_cost, "lost": current_loss, "grad_overlap":grad_overlap, "step_size":step_size, "energy": energy, "overlap": overlap, "s": s}
+        log_dict = {"cost": current_cost, "lost": current_loss, "grad_overlap":grad_overlap, "step_size":step_size, "energy": energy, "overlap": overlap, "s": s}
+        if log:
+            wandb.log(log_dict)
+        else:
+            print(log_dict)
+  
+
+    print(f"Optimization Done!\n function min = {current_cost}")
+    res = Optimizer_reuslt(function_value = current_cost,x = x)
     return res
