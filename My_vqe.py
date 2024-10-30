@@ -12,6 +12,7 @@ import pickle
 import wandb
 from scipy.optimize import approx_fprime
 from functools import partial
+from tqdm import tqdm
 
 
 from IQH_state import print_state_vector, normalize
@@ -205,13 +206,13 @@ def my_optimizer(x, cost_func, eps, step_size, approx_min, log):
     l = 1
     s = 1
     c = lambda s: np.exp((M - s) / l)
-    loss = lambda x,s: 1 * np.exp(-(c(s)  /  (np.exp( 1e2 * (cost_func(x) - approx_min)) - 1)**2 )**1)
+    loss = lambda x,s: 1 * np.exp(-(c(s)  /  (np.exp( 1e2 * (cost_func(x) - approx_min)) - 1)**2 )**2)
     grad_loss = lambda x,s: approx_fprime(x, loss, eps, s)
     tmp_grad  = grad_loss(x,s)
 
     current_cost = cost_func(x) 
     current_loss = loss(x,s)
-    while(np.abs(current_cost - approx_min) > 1e-4):
+    while(np.abs(current_cost - approx_min - 1e-5) > 1e-4):
         while(current_loss < 0.4):
             s+= 1
             current_loss = loss(x,s)
@@ -244,7 +245,8 @@ def my_optimizer_V2(x, cost_func, eps, step_size, approx_min, log):
     M = 200
     s = 1
     c = lambda s: np.exp((M - s) / 1)
-    loss = lambda x,s: np.exp( - (c(s) / ( (np.exp( 1e2 * (cost_func(x) - approx_min) ) ) - 1)**2)** 1)
+    # loss = lambda x,s: np.exp( - (c(s) / ( (np.exp( 1e2 * (cost_func(x) - approx_min - 0.05) ) ) - 1)**2)**0.5)
+    loss = lambda x,s: -np.exp( -10 * (cost_func(x) - approx_min - 0.05))
     grad_loss = lambda x,s: approx_fprime(x, loss, eps, s)
     tmp_grad  = grad_loss(x,s)
     current_cost = cost_func(x) 
@@ -252,10 +254,10 @@ def my_optimizer_V2(x, cost_func, eps, step_size, approx_min, log):
     grad_step_size = 1e-2
     counter = 0
     while(np.abs(current_cost - approx_min) > 1e-4):
-        print("\n\nLowering bounds")
-        while(current_loss < 0.5):
-            s+= 1
-            current_loss = loss(x,s)
+        # print("\n\nLowering bounds")
+        # while(current_loss < 0.5):
+        #     s+= 1
+        #     current_loss = loss(x,s)
     
         grad_overlap_counter = 0
         direction_vector = np.zeros(len(x))
@@ -285,27 +287,31 @@ def my_optimizer_V2(x, cost_func, eps, step_size, approx_min, log):
                 
         
         direction_vector = normalize(direction_vector)
-
+        # print("Tunning learning rate")
+        # while(current_loss  >= loss(x - direction_vector * step_size,s) and step_size <= 2 * np.pi):
+        #     step_size *= 2
+        #     print(f"Learing rate:{step_size}, curret_loss: {current_loss}, loss: {loss(x - direction_vector * step_size,s)}")
+        # while(current_loss * 2 <= loss(x - direction_vector * step_size,s)):
+        #     step_size /= 1.1
+        #     print(f"Learing rate:{step_size}, curret_loss: {current_loss}, loss: {loss(x - direction_vector * step_size,s)}")
+        # x = x - direction_vector * step_size / 2 
+        
         loss_value_list = []
         cost_value_list = []
-        l_range = range(-10,int(1e3))
-        for l in l_range:
-            loss_value_list.append(loss(x - direction_vector * 1e-2 * l,s))
-            cost_value_list.append(cost_func(x - direction_vector * 1e-2 * l))
-        plt.plot(l_range,loss_value_list)
+        l_range = np.linspace(start = - 5 * step_size, stop =   5 * step_size, num = int(1e2))
+        # l_range = np.linspace(start = -2 * np.pi, stop =   2 * np.pi, num = int(5e2))
+        for l in tqdm(l_range):
+            loss_value_list.append(loss(x - direction_vector * l,s))
+            cost_value_list.append(cost_func(x - direction_vector * l))
+        plt.figure()
+        # plt.plot(l_range,loss_value_list)
         plt.plot(l_range,cost_value_list)
         plt.grid()
         plt.savefig(f'tmpfig_{counter}.jpg')
+        plt.close()
         counter += 1
-
-        print("Tunning learning rate")
-        while(current_loss >= loss(x - direction_vector * step_size,s)):
-            step_size *= 2
-            print(f"Learing rate:{step_size}, curret_loss: {current_loss}, loss: {loss(x - direction_vector * step_size,s)}")
-        while(current_loss * 2 <= loss(x - direction_vector * step_size,s)):
-            step_size /= 1.1
-            print(f"Learing rate:{step_size}, curret_loss: {current_loss}, loss: {loss(x - direction_vector * step_size,s)}")
-        x = x - direction_vector * step_size / 2 
+        
+        
         print("Optimize")
         res = minimize(
             # lambda l: cost_func(x - direction_vector * step_size * l, return_all=False),
