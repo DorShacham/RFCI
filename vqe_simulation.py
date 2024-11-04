@@ -46,5 +46,5 @@ if __name__ == "__main__":
             config= config
             )
     saving_path = str(f"results/vqe_simulation/Nx-{Nx}_Ny-{Ny}_EF-{extention_factor}/{config['data']['id']}")
-    vqe_simulation(Nx = Nx, Ny = Ny, config_list = config_list, n = n, extention_factor = extention_factor , pre_anzats = None,saveto = saving_path, log = log)
+    vqe_simulation(Nx = Nx, Ny = Ny, config_list = config_list, n = n, extention_factor = extention_factor , pre_ansatz = None,saveto = saving_path, log = log)
     

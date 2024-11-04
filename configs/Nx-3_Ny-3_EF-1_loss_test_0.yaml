@@ -6,7 +6,7 @@ data:
   n: 
   id: 'loss_test_0'
 
-resarach_question: 'checking convergences with loss anzats'
+resarach_question: 'checking convergences with loss ansatz'
 
 config1:
   band_energy: 1
