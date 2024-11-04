@@ -110,8 +110,6 @@ class VQE:
         elif not for_grad:
             print(f"Iters. done: {self.cost_history_dict['iters']} [Current cost: {cost}, energy:{energy}]")
 
-        print(cost)
-        print(overlap)
         return cost
 
     def my_cost_func(self,params, return_all = False):
@@ -130,7 +128,7 @@ class VQE:
 # start the optimization proccess. all data on optimization is saved in self.cost_history_dict
     def minimize(self):
         if self.config['random_initial_parametrs']:
-            x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters)
+            x0 = 2 * np.pi * np.random.random(self.ansatz.num_parameters) 
         else:
             x0 = np.zeros(self.ansatz.num_parameters)
 
@@ -153,11 +151,10 @@ class VQE:
                 # options={"maxiter":self.config['maxiter'], "rhobeg":0.1},
                 options = {
                 'ftol': 2.220446049250313e-09,  # Function tolerance
-                'gtol': 1e-05,  # Gradient tolerance
+                'gtol': 1e-08,  # Gradient tolerance
                 'eps': 1e-08,  # Step size for numerical approximation
-                'maxiter': 15000,  # Maximum iterations
-                'maxfun': 15000,  # Maximum function evaluations
-                'maxcor': 10,  # Number of corrections used in the L-BFGS update
+                'maxiter': self.config['maxiter'],  # Maximum iterations
+                'maxfun': self.config['maxiter'],  # Maximum function evaluations
                 },
                 # options={"maxiter":self.config['maxiter']},
                 # bounds= [(0, 2*np.pi) for _ in range(self.ansatz.num_parameters)]
@@ -242,11 +239,11 @@ def my_optimizer(x, cost_func, eps, step_size, approx_min, log):
     return res
 
 def my_optimizer_V2(x, cost_func, eps, step_size, approx_min, log):
-    M = 200
+    M = 4
     s = 1
     c = lambda s: np.exp((M - s) / 1)
-    # loss = lambda x,s: np.exp( - (c(s) / ( (np.exp( 1e2 * (cost_func(x) - approx_min - 0.05) ) ) - 1)**2)**0.5)
-    loss = lambda x,s: -np.exp( -10 * (cost_func(x) - approx_min - 0.05))
+    loss = lambda x,s: np.exp( - (c(s) / ( (np.exp( 1e1 * (cost_func(x) - approx_min - 1) ) ) - 1)**2)**0.5)
+    # loss = lambda x,s: -np.exp( -10 * (cost_func(x) - approx_min - 1))
     grad_loss = lambda x,s: approx_fprime(x, loss, eps, s)
     tmp_grad  = grad_loss(x,s)
     current_cost = cost_func(x) 
@@ -304,7 +301,7 @@ def my_optimizer_V2(x, cost_func, eps, step_size, approx_min, log):
             loss_value_list.append(loss(x - direction_vector * l,s))
             cost_value_list.append(cost_func(x - direction_vector * l))
         plt.figure()
-        # plt.plot(l_range,loss_value_list)
+        plt.plot(l_range,loss_value_list)
         plt.plot(l_range,cost_value_list)
         plt.grid()
         plt.savefig(f'tmpfig_{counter}.jpg')
@@ -320,8 +317,8 @@ def my_optimizer_V2(x, cost_func, eps, step_size, approx_min, log):
             args=(),
             # method="cobyla",
             method="SLSQP",
-            tol=1e-5,
-            options={"maxiter":100, "rhobeg":step_size / 10},
+            # tol=1e-5,
+            # options={"maxiter":100, "rhobeg":step_size / 10},
         )
         x = x - direction_vector * step_size * res.x
         current_cost, energy, overlap= cost_func(x, return_all=True)

@@ -8,7 +8,7 @@
 #SBATCH --output /home/dor-hay.sha/master/RFCI/slurm_script/output/vqe-4-result-%j.out   ## filename of the output; the %j is equivalent to jobID; default is slurm-[jobID].out
 #SBATCH --ntasks=1  ## number of tasks (analyses) to run
 #SBATCH -c 12
-#SBATCH --time=0-20:10:00  ## time for analysis (day-hour:min:sec)
+#SBATCH --time=2-20:10:00  ## time for analysis (day-hour:min:sec)
 
 ##Load the CUDA module
 module load cuda
