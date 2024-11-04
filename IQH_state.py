@@ -188,7 +188,7 @@ class Multi_particle_state:
         return new_state
 
 # Create the single body Hamiltonian in real space
-def build_H(Nx = 2, Ny = 2, band_energy = 1, phi = np.pi/4, phase_shift_x = 0, phase_shift_y = 0):
+def build_H(Nx = 2, Ny = 2, band_energy = 1, phi = np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff= None):
 # parametrs of the model
     N = Nx * Ny
     M = 0
@@ -227,6 +227,10 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, phi = np.pi/4, phase_shift_x = 0, p
     # dft matrix as a tensor protuct of dft in x and y axis and idenity in the sublattice
     dft_matrix = np.kron(dft(Nx),(np.kron(dft(Ny),np.eye(2)))) / np.sqrt(N)
     H_real_space =np.matmul(np.matmul(dft_matrix.T.conjugate(),H_k), dft_matrix)
+    
+    if element_cutoff is not None:
+        H_real_space[np.abs(H_real_space) < element_cutoff] = 0
+    
     return H_real_space
 
 # Creating an Interger Quantum Hall state on a 2 * Nx * Ny lattice and then extend the lattice by extention_factor
