@@ -25,7 +25,7 @@ class Optimizer_reuslt:
 
 # VQE impliminatation: taking @ansatz @hamiltonian and find paramters 
 # for the @ansatz that minimizes the @hamiltonian expection value according to my_estimator.
-# @initial_state is the state of the quantum ciricut before the anzats
+# @initial_state is the state of the quantum ciricut before the ansatz
 # if @saveto - is not None, save the result of the optimization and graph to this addres
 class VQE:
     def __init__(self,Nx, Ny, initial_state ,ansatz,hamiltonian, config, approx_min = None, saveto = None, log = False, config_i = None, ground_states = None):
@@ -58,7 +58,7 @@ class VQE:
         
 
 # calculate the cost_function - the expection value of self.hamiltonian according to self.estimator
-# with self.anzats(@params)
+# with self.ansatz(@params)
     def cost_func(self,params, for_grad = False):
         """Return estimate of energy from estimator
 
@@ -110,8 +110,6 @@ class VQE:
         elif not for_grad:
             print(f"Iters. done: {self.cost_history_dict['iters']} [Current cost: {cost}, energy:{energy}]")
 
-        print(cost)
-        print(overlap)
         return cost
 
     def my_cost_func(self,params, return_all = False):

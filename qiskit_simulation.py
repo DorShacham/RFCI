@@ -1,28 +1,18 @@
 #%%
 import qiskit_nature, qiskit
 from qiskit import QuantumCircuit
-from qiskit_aer import Aer
-from qiskit.compiler import transpile, assemble
-from qiskit.visualization import *
-from qiskit import QuantumRegister,ClassicalRegister
-from qiskit.quantum_info.operators import Operator
 from qiskit.visualization import array_to_latex
 from qiskit_nature.second_q.operators import FermionicOp
 from qiskit_nature.second_q.mappers import JordanWignerMapper
-from qiskit_algorithms.optimizers import COBYLA
-from qiskit.primitives import Estimator
-from qiskit.circuit.library import EfficientSU2
-from qiskit_algorithms.minimum_eigensolvers import VQE
-from qiskit.circuit import ParameterVector
-from qiskit.circuit import Parameter
-from qiskit.circuit.library import ExcitationPreserving
-from qiskit_aer import AerSimulator, QasmSimulator
-from qiskit.primitives import BackendEstimatorV2
-from qiskit.primitives import StatevectorEstimator
-from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qiskit.quantum_info import SparsePauliOp
+from qiskit.circuit.library import *
+from qiskit.circuit import  Parameter
+from qiskit import transpile
+from qiskit.quantum_info.operators import Operator
+
 
 from scipy.linalg import expm
+import os
 
 from IQH_state import *
 from flux_attch import *
@@ -34,7 +24,7 @@ from exact_diagnolization import exact_diagnolization
 
 # Build the Hamiltonina Operator (with interction) from sparce Pauli strin for a lattice of shape (@Nx, @Ny).
 # If @return_NN = True then return a list of (n1,n2) nearest niegbors for anaztas entanglement.
-def build_qiskit_H(Nx, Ny, interaction_strength = 1e-1, band_energy = 1, reutrn_NN = True, NNN = False):
+def build_qiskit_H(Nx, Ny, interaction_strength = 1e-1, band_energy = 1):
     N = 2 * Nx * Ny
     H = build_H(Nx = Nx, Ny = Ny, band_energy = band_energy)
     hamiltonian_terms = {}
@@ -44,7 +34,6 @@ def build_qiskit_H(Nx, Ny, interaction_strength = 1e-1, band_energy = 1, reutrn_
             hamiltonian_terms[f"+_{i} -_{j}"] = H[i,j]
 
     # interaction and nearest neighbors
-    NN = []
     for i in [0,1]:
         for j in [0,1]:
             for x in range(Nx):
@@ -52,19 +41,7 @@ def build_qiskit_H(Nx, Ny, interaction_strength = 1e-1, band_energy = 1, reutrn_
                     n1 = cite_2_cite_index(x = x, y = y, sublattice = 0, Ny = Ny)
                     n2 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 1, Ny = Ny)
                     hamiltonian_terms[f"+_{n1} -_{n1} +_{n2} -_{n2}"] = interaction_strength
-                    NN.append((n1,n2))
-    if NNN:
-        for i,j in [(0,1),(0,-1),(1,0),(-1,0)]:
-            for x in range(Nx):
-                for y in range(Ny):
-                    n1 = cite_2_cite_index(x = x, y = y, sublattice = 0, Ny = Ny)
-                    n3 = cite_2_cite_index(x = x, y = y, sublattice = 1, Ny = Ny)
-                    n2 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 0, Ny = Ny)
-                    n4 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 1, Ny = Ny)
-                    hamiltonian_terms[f"+_{n1} -_{n1} +_{n2} -_{n2}"] = interaction_strength
-                    hamiltonian_terms[f"+_{n3} -_{n3} +_{n4} -_{n4}"] = interaction_strength
-                    NN.append((n1,n2))
-                    NN.append((n3,n4))
+
 
 
             
@@ -72,10 +49,7 @@ def build_qiskit_H(Nx, Ny, interaction_strength = 1e-1, band_energy = 1, reutrn_
     qubit_converter = JordanWignerMapper()
     qiskit_H = qubit_converter.map(hamiltonian_terms)
 
-    if reutrn_NN:
-        return qiskit_H, NN
-    else:
-        return qiskit_H
+    return qiskit_H
 
 
 # Build the phase attechment operator
@@ -100,71 +74,105 @@ def flux_attch_gate(N, mps, Nx, Ny):
             qc.append(u,[i,j])
     return transpile(qc)
 
+def entangle_2_cites(x_vector, y_vector, sublattice_vector, Nx, Ny, param_name):
+    NN = []
+    qc = QuantumCircuit(2 * Nx * Ny)
+    p = Parameter(str(param_name))
+    for x in range(Nx):
+        for y in range(Ny):
+            cite_A = cite_2_cite_index(x=x,y=y,sublattice=0,Ny=Ny)
+            cite_B = cite_2_cite_index(x=(x + x_vector) % Nx,y=(y + y_vector) % Ny,sublattice=(sublattice_vector) % 2, Ny=Ny)
+            NN.append((cite_A,cite_B))
+            qc.rxx(p,cite_A,cite_B)
+    return NN, qc
+
 # create an excitation preserving translation_invariant_ansatz according to the symmetris of the problem
 # For lattice of size @Nx @Ny with @reps
-def translation_invariant_ansatz(Nx, Ny, reps):
-    NN = []
-    for i in [0,1]:
-        for j in [0,1]:
-            for x in range(Nx):
-                for y in range(Ny):
-                    n1 = cite_2_cite_index(x = x, y = y, sublattice = 0, Ny = Ny)
-                    n2 = cite_2_cite_index(x = (x - i) % Nx, y = (y - j) % Ny, sublattice = 1, Ny = Ny)
-                    NN.append((n1,n2))
-    N = 2 * Nx * Ny
-    num_qubits = N
-    ansatz = ExcitationPreserving(
-        num_qubits=num_qubits,
-        reps=reps,
-        entanglement=NN,
-        mode='fsim',
-        insert_barriers=False,
-        flatten=True
-    )
+def translation_invariant_ansatz(Nx, Ny, reps = 1, return_NN = False):
+    N = 2 * Nx * Ny 
+    band_energy = 1
+    if return_NN:
+        reps = 1
 
-    old_parm_per_rep =  N + len(NN) * 2
-    param_per_single_qubit = 2 # 2 cites in cell
-    param_per_NN = 2 * 2 # there are 4 NN, out of which there is reflection invaraince in both direction meaning only 2 uniqe directions. The other 2 is becuase the anzats use 2 params per pair.
-    parm_per_rep = param_per_single_qubit + param_per_NN
-    num_of_params = parm_per_rep * reps + param_per_single_qubit
-    # Create a ParameterVector for the unique parameters
-    unique_params = ParameterVector('θ', num_of_params)
+    ansatz = QuantumCircuit(N)
+    param_counter = 0
+    for res in range(reps):   
+        # Rz gates
+        p0 = Parameter(str(param_counter))
+        p1 = Parameter(str(param_counter + 1))
+        for q in range(N):
+            p = p0 if (q % 2) == 0 else p1
+            ansatz.rz(p,[q])
+        param_counter += 2
 
-    # 4. Bind the parameters to achieve translation invariance
-    param_dict = {}
-    for rep in range(reps):
-        for i in range(N):
-            sublattice = i % 2
-            param_dict[ansatz.parameters[i + old_parm_per_rep * rep]] = unique_params[sublattice + parm_per_rep * rep]
-        # for i in range(len(NN) // 4):
-            # param_dict[ansatz.parameters[0 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[0 + param_per_single_qubit + parm_per_rep * rep]
-            # param_dict[ansatz.parameters[1 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[1 + param_per_single_qubit + parm_per_rep * rep]
-            
-            # param_dict[ansatz.parameters[2 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[2 + param_per_single_qubit + parm_per_rep * rep]
-            # param_dict[ansatz.parameters[3 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[3 + param_per_single_qubit + parm_per_rep * rep]
-            # param_dict[ansatz.parameters[4 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[2 + param_per_single_qubit + parm_per_rep * rep]
-            # param_dict[ansatz.parameters[5 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[3 + param_per_single_qubit + parm_per_rep * rep]
+        # NN
+        NN = []
+        for x_vector, y_vector in [(0,0), (0,1), (-1,0), (-1,-1)]:
+            NN_tmp, ansatz_tmp = entangle_2_cites(x_vector=x_vector,y_vector=y_vector,sublattice_vector=1,Nx=Nx,Ny=Ny, param_name = str(param_counter))
+            NN += NN_tmp
+            ansatz = ansatz.compose(ansatz_tmp, range(N))
+            param_counter += 1
 
-            # param_dict[ansatz.parameters[6 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[0 + param_per_single_qubit + parm_per_rep * rep]
-            # param_dict[ansatz.parameters[7 + 8 * i + N + old_parm_per_rep * rep]] = unique_params[1 + param_per_single_qubit + parm_per_rep * rep]
-        for i in range(2 * len(NN)):
-            param_dict[ansatz.parameters[i + N + old_parm_per_rep * rep]] = unique_params[(i % 2) + 2 * ((((i // (2 * len(NN) // 4)) + 1) // 2) % 2) +  param_per_single_qubit + parm_per_rep * rep]
-    # final rotation
-    for i in range(N):
-            sublattice = i % 2
-            param_dict[ansatz.parameters[i + old_parm_per_rep * reps]] = unique_params[sublattice + parm_per_rep * reps]
 
-    # Bind the parameters
-    translation_invariant_ansatz = ansatz.assign_parameters(param_dict)
 
-    # print(f"Number of parameters after binding: {translation_invariant_ansatz.num_parameters}")
-    # print(f"Parameter names after binding: {translation_invariant_ansatz.parameters}")
-    return translation_invariant_ansatz
+        # Next nearest neighbors (NNN)
+        p = Parameter(str(param_counter))
+        for x in range(Nx // 2):
+            for y in range(Ny):
+                for sublattice in [0,1]:
+                    cite_A = cite_2_cite_index(x= (2 * x),y=y,sublattice=sublattice,Ny=Ny)
+                    cite_B = cite_2_cite_index(x=(2 * x + 1) % Nx,y=y,sublattice=sublattice, Ny=Ny)
+                    NN.append((cite_A,cite_B))
+                    ansatz.rzz(p,cite_A,cite_B)
+
+        param_counter += 1
+        p = Parameter(str(param_counter))
+        for x in range(Nx // 2):
+            for y in range(Ny):
+                for sublattice in [0,1]:
+                    cite_A = cite_2_cite_index(x= (2 * x + 1),y=y,sublattice=sublattice,Ny=Ny)
+                    cite_B = cite_2_cite_index(x=(2 * x + 2) % Nx,y=y,sublattice=sublattice, Ny=Ny)
+                    NN.append((cite_A,cite_B))
+                    ansatz.rzz(p,cite_A,cite_B)
+        
+        param_counter += 1
+        p = Parameter(str(param_counter))
+        for x in range(Nx):
+            for y in range(Ny // 2):
+                for sublattice in [0,1]:
+                    cite_A = cite_2_cite_index(x=x,y=(2 * y),sublattice=sublattice,Ny=Ny)
+                    cite_B = cite_2_cite_index(x=x,y=(2 * y + 1) % Ny,sublattice=sublattice, Ny=Ny)
+                    NN.append((cite_A,cite_B))
+                    ansatz.rzz(p,cite_A,cite_B)
+        
+        param_counter += 1
+        p = Parameter(str(param_counter))
+        for x in range(Nx):
+            for y in range(Ny // 2):
+                for sublattice in [0,1]:
+                    cite_A = cite_2_cite_index(x=x,y=(2 * y + 1),sublattice=sublattice,Ny=Ny)
+                    cite_B = cite_2_cite_index(x=x,y=(2 * y + 2) % Ny,sublattice=sublattice, Ny=Ny)
+                    NN.append((cite_A,cite_B))
+                    ansatz.rzz(p,cite_A,cite_B)
+        param_counter += 1
+
+    # final rotation - Rz gates
+    p0 = Parameter(str(param_counter))
+    p1 = Parameter(str(param_counter + 1))
+    for q in range(N):
+        p = p0 if (q % 2) == 0 else p1
+        ansatz.rz(p,[q])
+    param_counter += 2
+
+    if return_NN:
+        return NN
+    return transpile(ansatz, optimization_level=3)
+
 
 # for a given @state_vecotr on lattice @Nx,@Ny print a heatmap of the distribution of electrons.
 # if @saveto is not None should be a path to save location for the heatmap
 
-def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_anzats = None,saveto = None, log = False):
+def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_ansatz = None,saveto = None, log = False):
     # Initialzing state
     # Prearing the Full Hilbert 2^N state
     # number of electrons - half of the original system
@@ -178,12 +186,12 @@ def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_anz
     init_state_vector = state_2_full_state_vector(state, mps)
     sv = Statevector(init_state_vector)
 
-    if pre_anzats is not None:
-        sv = sv.evolve(pre_anzats)
+    if pre_ansatz is not None:
+        sv = sv.evolve(pre_ansatz)
     
 
     for i, config_dict in enumerate(config_list):
-        qiskit_H, NN = build_qiskit_H(Nx = Nx, Ny = Ny, interaction_strength = config_dict['interaction_strength'], band_energy = config_dict['band_energy'], reutrn_NN=True, NNN=config_dict['NNN'])
+        qiskit_H = build_qiskit_H(Nx = Nx, Ny = Ny, interaction_strength = config_dict['interaction_strength'], band_energy = config_dict['band_energy'])
         if config_dict['flux_attch']:
             sv = sv.evolve(flux_attch_gate(N, mps, Nx, Ny))
 
@@ -191,6 +199,7 @@ def vqe_simulation(Nx, Ny, config_list, n = None, extention_factor = 3 , pre_anz
         if config_dict['translation_invariant_ansatz']:
             ansatz = translation_invariant_ansatz(Nx, Ny, reps = config_dict['anzts_reps'])
         else:
+            NN = translation_invariant_ansatz(Nx, Ny, return_NN = True)
             ansatz = ExcitationPreserving(N, reps= config_dict['anzts_reps'], insert_barriers=False, entanglement=NN,flatten=True, mode='fsim')
         
         if saveto is not None:
