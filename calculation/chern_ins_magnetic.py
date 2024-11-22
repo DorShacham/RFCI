@@ -7,6 +7,7 @@ from scipy.linalg import block_diag,dft,expm
 from tqdm import tqdm
 from mpl_toolkits.mplot3d import Axes3D
 
+
 def build_H(Nx = 2, Ny = 2, band_energy = 1, phi = np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff= None):
 # parametrs of the model
     N = Nx * Ny
@@ -82,6 +83,12 @@ def add_magnetic_field(H_real_space, p, q, Nx, Ny, cites_per_uc):
                 H_real_space[cite_A_index,cite_B_index] *= hopping_phase.conjugate()
     return H_real_space
 
+def magnetic_FT(H_real_space,Nx,Ny,q,cites_per_uc):
+    N = Nx * Ny
+    dft_matrix = np.kron(dft(Nx) ,(np.kron(dft(Ny // q),np.eye(cites_per_uc * q)))) / np.sqrt(N // q)
+    H_k_space = np.matmul(np.matmul(dft_matrix,H_real_space), dft_matrix.T.conjugate())
+    return H_k_space
+
 def Hofstadter_butterfly(Nx,Ny, q = 100):
     H_real_space_vanila = build_basic_H(Nx,Ny)
     
@@ -95,13 +102,36 @@ def Hofstadter_butterfly(Nx,Ny, q = 100):
     plt.show()
 
 def eigen_value_test(Nx,Ny,p,q):
+    cites_per_uc = 1
     H_real_space_vanila = build_basic_H(Nx,Ny)
-    H_real_space = add_magnetic_field(np.array(H_real_space_vanila), p, q, Nx, Ny, 1)
-    
+    H_real_space = add_magnetic_field(np.array(H_real_space_vanila), p, q, Nx, Ny, cites_per_uc)
+    # plt.matshow(np.abs(H_real_space))
+
+    eig_val_original, eig_vec = np.linalg.eigh(H_real_space)
+
+    H_k_space = magnetic_FT(H_real_space, Nx, Ny, q, cites_per_uc=1)
+    plt.matshow(np.abs(H_k_space))
+    E = np.zeros((cites_per_uc * q,Nx // q,Ny))
+    for kx in range(Nx // q):
+        for ky in range(Ny):
+            unit_cell = H_k_space[(cites_per_uc * q) * (Ny * kx + ky) : (cites_per_uc * q) * (Ny * kx + ky + 1),(cites_per_uc * q) * (Ny * kx + ky) : (cites_per_uc * q) * (Ny * kx + ky + 1)]
+        #    print(f"---{np.shape(unit_cell)}----\n\n")
+        #    print(unit_cell)
+
+            eig_val, eig_vec = np.linalg.eigh(unit_cell)
+            print(eig_val)
+            E[:,kx,ky] = eig_val
+
+    eig_val_magnetic_FT = np.sort(np.reshape(E,(len(eig_val_original))))
+    print(eig_val_original)
+    print("\n\n -------------- \n\n")
+    print(eig_val_magnetic_FT)
+    print(np.sum(np.abs(eig_val_original - eig_val_magnetic_FT)))
 
 #%%
-Hofstadter_butterfly(Nx = 20, Ny = 20, q = 1000)
-
+Hofstadter_butterfly(Nx = 10, Ny = 10, q = 100)
+#%%
+eigen_value_test(Nx=6,Ny=6,p=0,q=2)
 
 
 
