@@ -4,13 +4,13 @@ from flux_attch import *
 from exact_diagnolization import *
 import numpy as np
 
-Nx = 6
-Ny = 2
+Nx = 3
+Ny = 3
 
-for cutoff in [1e-1, 1e-2, 1e-3]:
+for cutoff in [1e-1, 1e-2, 1e-3, None]:
     element_cutoff = cutoff
 
-    phi_list = np.linspace(start=0,stop=3, num=150 + 1)
+    phi_list = np.linspace(start=0,stop=3, num=30 + 1)
     eigenvalues_list = []
     for i, phi in enumerate(phi_list):
         eigenvalues, eigenvectors = exact_diagnolization(Nx=Nx, Ny=Ny,phase_shift_x=phi * 2 * np.pi, element_cutoff=element_cutoff ,k=7, multi_process=False,multiprocess_func=multiprocess_map, save_result= False, show_result=False)
@@ -30,7 +30,7 @@ for cutoff in [1e-1, 1e-2, 1e-3]:
     plt.grid()
     
     plt.title(f"Spectral flow with element cutoff\n of {cutoff} for ({Nx,Ny}) lattice \n(first 7 eigenvalues shifted by the lowest value)")
-    plt.savefig(f"./results/spectral_flow/H_element_cutoff-{cutoff}_1.jpg")
+    plt.savefig(f"./results/spectral_flow/Nx-{Nx}_Ny-{Ny}/H_element_cutoff-{cutoff}_1.jpg")
 
 
 
@@ -41,4 +41,4 @@ for cutoff in [1e-1, 1e-2, 1e-3]:
     plt.grid()
 
     plt.title(f"Spectral flow with element cutoff\n of {cutoff} for ({Nx,Ny}) lattice \n(first 3 eigenvalues shifted by the lowest value)")
-    plt.savefig(f"./results/spectral_flow/H_element_cutoff-{cutoff}_2.jpg")
+    plt.savefig(f"./results/spectral_flow/Nx-{Nx}_Ny-{Ny}/H_element_cutoff-{cutoff}_2.jpg")
