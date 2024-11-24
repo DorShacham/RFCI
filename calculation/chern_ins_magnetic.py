@@ -72,13 +72,25 @@ def build_basic_H(Nx,Ny, hoppint_term = 1):
   
 def add_magnetic_field(H_real_space, p, q, Nx, Ny, cites_per_uc):
 # adding vector potential A = (0,Bx,0) in Landuo gague
+    # for x in range(Nx):
+    #     for y in range(Ny):
+    #         for sublattice in range(cites_per_uc):
+    #             # cite_index = cites_per_uc * (Ny * x + y ) + sublattice
+    #             cite_A_index = cites_per_uc * (Ny * x + y ) + sublattice
+    #             cite_B_index = cites_per_uc * (Ny * x + (y + 1) % Ny) + sublattice
+    #             hopping_phase = np.exp(1j * 2 * np.pi * (p / q) * x)
+    #             H_real_space[cite_B_index,cite_A_index] *= hopping_phase
+    #             H_real_space[cite_A_index,cite_B_index] *= hopping_phase.conjugate()
+    # return H_real_space
+
+# adding vector potential A = (By,0,0) 
     for x in range(Nx):
         for y in range(Ny):
             for sublattice in range(cites_per_uc):
-                # cite_index = cites_per_uc * (Ny * x + y ) + sublattice
+            # cite_index = cites_per_uc * (Ny * x + y ) + sublattice
                 cite_A_index = cites_per_uc * (Ny * x + y ) + sublattice
-                cite_B_index = cites_per_uc * (Ny * x + (y + 1) % Ny) + sublattice
-                hopping_phase = np.exp(1j * 2 * np.pi * (p / q) * x)
+                cite_B_index = cites_per_uc * (Ny * ((x + 1) % Nx) + y) + sublattice
+                hopping_phase = np.exp(1j * 2 * np.pi * (p / q) * y)
                 H_real_space[cite_B_index,cite_A_index] *= hopping_phase
                 H_real_space[cite_A_index,cite_B_index] *= hopping_phase.conjugate()
     return H_real_space
@@ -101,7 +113,14 @@ def Hofstadter_butterfly(Nx,Ny, q = 100):
 
     plt.show()
 
-def eigen_value_test(Nx,Ny,p,q):
+def eigen_value_test(Nx,Ny,p,q, model = 'basic'):
+    if model == 'basic':
+        cites_per_uc = 1
+        H_real_space = build_basic_H(Nx,Ny)
+    elif model == 'chern':
+        cites_per_uc = 2
+        H_real_space = build_H(Nx,Ny)
+
     cites_per_uc = 1
     H_real_space_vanila = build_basic_H(Nx,Ny)
     H_real_space = add_magnetic_field(np.array(H_real_space_vanila), p, q, Nx, Ny, cites_per_uc)
@@ -111,15 +130,14 @@ def eigen_value_test(Nx,Ny,p,q):
 
     H_k_space = magnetic_FT(H_real_space, Nx, Ny, q, cites_per_uc=1)
     plt.matshow(np.abs(H_k_space))
-    E = np.zeros((cites_per_uc * q,Nx // q,Ny))
-    for kx in range(Nx // q):
-        for ky in range(Ny):
-            unit_cell = H_k_space[(cites_per_uc * q) * (Ny * kx + ky) : (cites_per_uc * q) * (Ny * kx + ky + 1),(cites_per_uc * q) * (Ny * kx + ky) : (cites_per_uc * q) * (Ny * kx + ky + 1)]
+    E = np.zeros((cites_per_uc * q, Nx, Ny // q))
+    for kx in range(Nx):
+        for ky in range(Ny // q):
+            unit_cell = H_k_space[(cites_per_uc * q) * ((Ny // q) * kx + ky) : (cites_per_uc * q) * ((Ny // q) * kx + ky + 1),(cites_per_uc * q) * ((Ny // q) * kx + ky) : (cites_per_uc * q) * ((Ny // q) * kx + ky + 1)]
         #    print(f"---{np.shape(unit_cell)}----\n\n")
         #    print(unit_cell)
 
             eig_val, eig_vec = np.linalg.eigh(unit_cell)
-            print(eig_val)
             E[:,kx,ky] = eig_val
 
     eig_val_magnetic_FT = np.sort(np.reshape(E,(len(eig_val_original))))
@@ -128,64 +146,29 @@ def eigen_value_test(Nx,Ny,p,q):
     print(eig_val_magnetic_FT)
     print(np.sum(np.abs(eig_val_original - eig_val_magnetic_FT)))
 
-#%%
-Hofstadter_butterfly(Nx = 10, Ny = 10, q = 100)
-#%%
-eigen_value_test(Nx=6,Ny=6,p=0,q=2)
+def plot_BZ(Nx, Ny, p, q, model = 'basic'):
+    if model == 'basic':
+        cites_per_uc = 1
+        H_real_space = build_basic_H(Nx,Ny)
+    elif model == 'chern':
+        cites_per_uc = 2
+        H_real_space = build_H(Nx,Ny)
+    
+    H_real_space = add_magnetic_field(np.array(H_real_space),p,q,Nx,Ny,cites_per_uc)
+    H_k_space = magnetic_FT(H_real_space, Nx, Ny, q, cites_per_uc)
+    plt.matshow(np.abs(H_k_space))
 
+    Kx = np.linspace(0, 2 * np.pi,num=Nx,endpoint=False)
+    Ky = np.linspace(0, 2 * np.pi / q,num=Ny // q,endpoint=False)
+    
+    E = np.zeros((cites_per_uc * q, Nx, Ny // q))
+    for kx in range(Nx):
+        for ky in range(Ny // q):
+            unit_cell = H_k_space[(cites_per_uc * q) * ((Ny // q) * kx + ky) : (cites_per_uc * q) * ((Ny // q) * kx + ky + 1),(cites_per_uc * q) * ((Ny // q) * kx + ky) : (cites_per_uc * q) * ((Ny // q) * kx + ky + 1)]
+    
+            eig_val, eig_vec = np.linalg.eigh(unit_cell)
+            E[:,kx,ky] = eig_val
 
-
-# %%
-
-#%%
-Nx = 24
-Ny = 24
-N = Nx * Ny
-# H_real_space, cites_per_uc = build_H(Nx = Nx, Ny = Ny, band_energy = 1), 2
-H_real_space, cites_per_uc = build_basic_H(Nx,Ny), 1
-# flux / flux_qunta = (p / q) i.e fraction of flux_qunat per unit cell
-p = 1
-q = 3
-magnetic = True
-dft_matrix = np.kron(dft(Nx // q) ,(np.kron(dft(Ny),np.eye(cites_per_uc * q)))) / np.sqrt(N // q)
-# dft_matrix = np.kron(np.eye(q), np.kron(dft(Nx // q),(np.kron(dft(Ny),np.eye(cites_per_uc))))) / np.sqrt(N // q)
-
-
-
-# adding vector potential A = (0,Bx,0)
-if magnetic: 
-    for x in range(Nx):
-        for y in range(Ny):
-            for sublattice in range(cites_per_uc):
-                # cite_index = cites_per_uc * (Ny * x + y ) + sublattice
-                cite_A_index = cites_per_uc * (Ny * x + y ) + sublattice
-                cite_B_index = cites_per_uc * (Ny * x + (y + 1) % Ny) + sublattice
-                hopping_phase = np.exp(1j * 2 * np.pi * (p / q) * x)
-                H_real_space[cite_B_index,cite_A_index] *= hopping_phase
-                H_real_space[cite_A_index,cite_B_index] *= hopping_phase.conjugate()
-
-
-H_k_space = np.matmul(np.matmul(dft_matrix,H_real_space), dft_matrix.T.conjugate())
-
-plt.matshow(np.abs(H_real_space))
-plt.matshow(np.abs(H_k_space))
-
-#%%
-Kx = np.linspace(0, 2 * np.pi / q,num=Nx // q,endpoint=False)
-Ky = np.linspace(0, 2 * np.pi,num=Ny,endpoint=False)
-E = np.zeros((cites_per_uc * q,Nx // q,Ny))
-
-for kx in range(Nx // q):
-    for ky in range(Ny):
-       unit_cell = H_k_space[(cites_per_uc * q) * (Ny * kx + ky) : (cites_per_uc * q) * (Ny * kx + ky + 1),(cites_per_uc * q) * (Ny * kx + ky) : (cites_per_uc * q) * (Ny * kx + ky + 1)]
-    #    print(f"---{np.shape(unit_cell)}----\n\n")
-    #    print(unit_cell)
-
-       eig_val, eig_vec = np.linalg.eigh(unit_cell)
-       print(eig_val)
-       E[:,kx,ky] = eig_val
-
-for r in range(cites_per_uc * q):
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -193,22 +176,27 @@ for r in range(cites_per_uc * q):
     # Plot the surface
     kx, ky = np.meshgrid(Kx, Ky,indexing="ij")
 
-    print(r)
-    color = plt.cm.tab10(r)  # Tab10 colormap
-    ax.plot_surface(kx, ky, E[r,:,:], color=color)
+    for r in range(cites_per_uc * q):
+        color = plt.cm.tab10(r)  # Tab10 colormap
+        ax.plot_surface(kx, ky, E[r,:,:], color=color)
 
     ax.view_init(elev=0, azim=90)  # Elevation = 30 degrees, Azimuth = 45 degrees
-    # Labels and title
+        # Labels and title
     ax.set_xlabel('kx')
     ax.set_ylabel('ky')
     ax.set_zlabel('E(kx, ky)')
     ax.set_title('3D Plot of E(kx, ky)')
 
-# Show the plot
-plt.show()
-#%%
-eig_val_original, eig_vec = np.linalg.eigh(H_real_space)
-eigv_val_foruier = np.sort(E.reshape((Nx * Ny * cites_per_uc)))
+    # Show the plot
+    plt.show()
 
-# print(np.abs((eig_val_original - eigv_val_foruier)))
-print(np.max(np.abs(eig_val_original - eigv_val_foruier)))
+#%%
+# Hofstadter_butterfly(Nx = 10, Ny = 10, q = 100)
+#%%
+# eigen_value_test(Nx=24,Ny=24,p=1,q=3, model = 'chern')
+
+#%%
+plot_BZ(Nx = 60, Ny = 60, p = 1, q = 3, model='chern')
+
+
+# %%
