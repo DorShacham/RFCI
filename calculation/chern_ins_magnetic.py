@@ -121,8 +121,6 @@ def eigen_value_test(Nx,Ny,p,q, model = 'basic'):
         cites_per_uc = 2
         H_real_space = build_H(Nx,Ny)
 
-    cites_per_uc = 1
-    H_real_space_vanila = build_basic_H(Nx,Ny)
     H_real_space = add_magnetic_field(np.array(H_real_space_vanila), p, q, Nx, Ny, cites_per_uc)
     # plt.matshow(np.abs(H_real_space))
 
@@ -189,14 +187,58 @@ def plot_BZ(Nx, Ny, p, q, model = 'basic'):
 
     # Show the plot
     plt.show()
+    return E
 
+
+def chern_number(Nx,Ny,p,q, model = 'basic'):
+    if model == 'basic':
+        cites_per_uc = 1
+        H_real_space = build_basic_H(Nx,Ny)
+    elif model == 'chern':
+        cites_per_uc = 2
+        H_real_space = build_H(Nx,Ny)
+
+    H_real_space = add_magnetic_field(np.array(H_real_space), p, q, Nx, Ny, cites_per_uc)
+
+    H_k_space = magnetic_FT(H_real_space, Nx, Ny, q, cites_per_uc)
+    E = np.zeros((cites_per_uc * q, Nx, Ny // q))
+    u_k = np.zeros((cites_per_uc * q, Nx, Ny // q, (cites_per_uc * q)), dtype=complex)
+    for kx in range(Nx):
+        for ky in range(Ny // q):
+            unit_cell = H_k_space[(cites_per_uc * q) * ((Ny // q) * kx + ky) : (cites_per_uc * q) * ((Ny // q) * kx + ky + 1),(cites_per_uc * q) * ((Ny // q) * kx + ky) : (cites_per_uc * q) * ((Ny // q) * kx + ky + 1)]
+
+            eig_val, eig_vec = np.linalg.eigh(unit_cell)
+            E[:,kx,ky] = eig_val
+            u_k[:,kx,ky,:] = eig_vec.T
+
+    def U(n,mu,kx,ky):
+        u = np.matmul(u_k[n,(kx % Nx),(ky % (Ny // q)),:].T.conjugate(), u_k[n,(kx + mu[0]) % Nx,(ky + mu[1]) % (Ny // q),:])
+        u /= np.abs(u)
+        return u
+    
+    C = np.zeros(q * cites_per_uc)
+    for kx in range(Nx):
+        for ky in range(Ny // q):
+            for n in range(q * cites_per_uc):
+                F12 = np.angle( U(n,[1,0],kx,ky) * U(n,[0,1],kx + 1,ky) / U(n,[1,0],kx,ky + 1) / U(n,[0,1],kx,ky)) / (2 * np.pi)
+                C[n] += F12
+    return C
 #%%
 # Hofstadter_butterfly(Nx = 10, Ny = 10, q = 100)
 #%%
 # eigen_value_test(Nx=24,Ny=24,p=1,q=3, model = 'chern')
 
 #%%
-plot_BZ(Nx = 60, Ny = 60, p = 1, q = 3, model='chern')
+Nx = 36
+Ny = 36
+p = 1
+q = 3  
+model = 'chern'
 
+E = plot_BZ(Nx, Ny, p,q,model)
+C = chern_number(Nx, Ny, p = p,q = q,model = model)
+print(C)
+for n in range(len(C)):
+    print(f"C_{n} = {C[n]}")
 
 # %%
