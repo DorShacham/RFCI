@@ -235,10 +235,14 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, phi = np.pi/4, phase_shift_x = 0, p
 
 # Creating an Interger Quantum Hall state on a 2 * Nx * Ny lattice and then extend the lattice by extention_factor
 # in the x direction
+# if H_sb is not None build the state according to it
 # return the state vector, extended_mps
-def create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor, band_energy = 1):
+def create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor, band_energy = 1, H_sb = None):
     N = 2 * Nx * Ny
-    H_real_space = build_H(Nx, Ny, band_energy)
+    if H_sb is None:
+        H_real_space = build_H(Nx, Ny, band_energy)
+    else:
+        H_real_space = H_sb
     eig_val, eig_vec = np.linalg.eigh(H_real_space)
 # eigen states (projected on the lower energies) tensor (state index, real space position with A,B sublattices. 
 # for position x,y sublattice A the index is 2 * (Ny * x + y) + A

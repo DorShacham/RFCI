@@ -7,69 +7,9 @@ from scipy.linalg import block_diag,dft,expm
 from tqdm import tqdm
 from mpl_toolkits.mplot3d import Axes3D
 
+from IQH_state import *
+from flux_attch import *
 
-def build_H(Nx = 2, Ny = 2, band_energy = 1, phi = np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff= None):
-# parametrs of the model
-    N = Nx * Ny
-    M = 0
-    # phi = np.pi/4
-    t1 = 1
-    t2 = (2-np.sqrt(2))/2
-
-    # Building the single particle hamiltonian (h2)
-    # need to check if the gauge transformation is needed to adress (Natanel said no)
-    # Starting the BZ from zero to 2pi since this is how the DFT matrix is built
-    Kx = np.linspace(0, 2 * np.pi,num=Nx,endpoint=False)
-    Ky = np.linspace(0, 2 * np.pi,num=Ny,endpoint=False)
-    X = np.array(range(Nx)) 
-    Y = np.array(range(Ny)) 
-
-    def build_h2(kx, ky, band_energy):
-        h11 = 2 * t2 * (np.cos(kx) - np.cos(ky)) + M
-        h12 = t1 * np.exp(1j * phi) * (1 + np.exp(1j * (ky - kx))) + t1 * t1 * np.exp(-1j * phi) * (np.exp(1j * (ky)) + np.exp(1j * (- kx)))
-        h2 = np.matrix([[h11, h12], [np.conjugate(h12), -h11]])
-        return h2
-
-    H_k_list = []
-    i = 0
-    for kx in Kx:
-        for ky in Ky:
-            H_single_particle = build_h2(kx - phase_shift_x/Nx,ky - phase_shift_y/Ny, band_energy)
-            eig_val, eig_vec = np.linalg.eigh(H_single_particle)
-            h_flat = H_single_particle / np.abs(eig_val[0]) * band_energy + i * 1e-8  # flat band limit
-            H_k_list.append(h_flat)
-            i += 1
-            
-    # creaing a block diagonal H_k matrix and dft to real space
-
-    H_k = block_diag(*H_k_list)
-
-    # dft matrix as a tensor protuct of dft in x and y axis and idenity in the sublattice
-    dft_matrix = np.kron(dft(Nx),(np.kron(dft(Ny),np.eye(2)))) / np.sqrt(N)
-    H_real_space =np.matmul(np.matmul(dft_matrix.T.conjugate(),H_k), dft_matrix)
-    
-    if element_cutoff is not None:
-        H_real_space[np.abs(H_real_space) < element_cutoff] = 0
-    
-    return H_real_space
-
-def build_basic_H(Nx,Ny, hoppint_term = 1):
-    N = Nx * Ny
-    H = np.zeros((N,N), dtype= complex)
-    for x in range(Nx):
-        for y in range(Ny):
-            # cite_index = 2 * (Ny * x + y ) + sublattice
-            cite_A_index = Ny * x + y
-            cite_B_index = Ny * x + (y + 1) % Ny
-            H[cite_B_index,cite_A_index] = hoppint_term
-            H[cite_A_index,cite_B_index] = hoppint_term
-
-            cite_B_index = Ny * ((x + 1) % Nx) + y
-            H[cite_B_index,cite_A_index] = hoppint_term
-            H[cite_A_index,cite_B_index] = hoppint_term
-
-    return H
-  
 def add_magnetic_field(H_real_space, p, q, Nx, Ny, cites_per_uc):
 # adding vector potential A = (0,Bx,0) in Landuo gague
     # for x in range(Nx):
@@ -127,7 +67,7 @@ def eigen_value_test(Nx,Ny,p,q, model = 'basic'):
     eig_val_original, eig_vec = np.linalg.eigh(H_real_space)
 
     H_k_space = magnetic_FT(H_real_space, Nx, Ny, q, cites_per_uc=1)
-    plt.matshow(np.abs(H_k_space))
+    # plt.matshow(np.abs(H_k_space))
     E = np.zeros((cites_per_uc * q, Nx, Ny // q))
     for kx in range(Nx):
         for ky in range(Ny // q):
@@ -154,15 +94,17 @@ def plot_BZ(Nx, Ny, p, q, model = 'basic'):
     
     H_real_space = add_magnetic_field(np.array(H_real_space),p,q,Nx,Ny,cites_per_uc)
     H_k_space = magnetic_FT(H_real_space, Nx, Ny, q, cites_per_uc)
-    plt.matshow(np.abs(H_k_space))
+    # plt.matshow(np.abs(H_k_space))
 
-    Kx = np.linspace(0, 2 * np.pi,num=Nx,endpoint=False)
-    Ky = np.linspace(0, 2 * np.pi / q,num=Ny // q,endpoint=False)
+    Kx = np.linspace(0, 2 * np.pi,num=Nx + 1,endpoint=True)
+    Ky = np.linspace(0, 2 * np.pi / q,num=Ny // q + 1,endpoint=True)
     
-    E = np.zeros((cites_per_uc * q, Nx, Ny // q))
-    for kx in range(Nx):
-        for ky in range(Ny // q):
-            unit_cell = H_k_space[(cites_per_uc * q) * ((Ny // q) * kx + ky) : (cites_per_uc * q) * ((Ny // q) * kx + ky + 1),(cites_per_uc * q) * ((Ny // q) * kx + ky) : (cites_per_uc * q) * ((Ny // q) * kx + ky + 1)]
+    E = np.zeros((cites_per_uc * q, Nx + 1, Ny // q + 1))
+    for kx in range(Nx + 1):
+        for ky in range(Ny // q + 1):
+            kx_m = kx % Nx
+            ky_m = ky % (Ny // q)
+            unit_cell = H_k_space[(cites_per_uc * q) * ((Ny // q) * kx_m + ky_m) : (cites_per_uc * q) * ((Ny // q) * kx_m + ky_m + 1),(cites_per_uc * q) * ((Ny // q) * kx_m + ky_m) : (cites_per_uc * q) * ((Ny // q) * kx_m + ky_m + 1)]
     
             eig_val, eig_vec = np.linalg.eigh(unit_cell)
             E[:,kx,ky] = eig_val
@@ -229,10 +171,11 @@ def chern_number(Nx,Ny,p,q, model = 'basic'):
 # eigen_value_test(Nx=24,Ny=24,p=1,q=3, model = 'chern')
 
 #%%
-Nx = 36
-Ny = 36
+Nx = 3
+Ny = 3
 p = 1
-q = 3  
+q = 3
+# model = 'basic'
 model = 'chern'
 
 E = plot_BZ(Nx, Ny, p,q,model)
@@ -242,3 +185,25 @@ for n in range(len(C)):
     print(f"C_{n} = {C[n]}")
 
 # %%
+# Let us simulate taking a full magnetic chern band state and then increading the field (or turnning it off)
+# s.t it will be in 1/3 of the non magnetic chern band and add 2 flux per electron 
+# and calculate the energy
+
+Nx = 3
+Ny = 3
+p = 1
+q = 3
+
+# electron number fill one 'Landu' level
+n = Nx * Ny // q
+
+H_real_space_v = build_H(Nx,Ny)
+H_real_space_magnetic = add_magnetic_field(np.array(H_real_space), p, q, Nx, Ny, cites_per_uc = 2)
+state, mps = create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 1, H_sb = H_real_space_magnetic)
+state = flux_attch_2_compact_state(state,mps,Ny)
+
+
+# calculting the energy on the interaction with out mangetic field many body H
+# <psi|H_many_body|psi> / <psi|psi>
+E = np.matmul(state.T.conjugate(), mps.H_manby_body(H_real_space,state)) / np.linalg.norm(state)
+print(E)
