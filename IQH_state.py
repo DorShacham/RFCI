@@ -1,3 +1,4 @@
+#%%
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import permutations, combinations
@@ -141,7 +142,7 @@ class Multi_particle_state:
 # The calculation is taking each unit vector in the multi-particle state, splitting it to single particle state calculating the action of
 # the single body hamiltonian on the single particle states and from the new single particle states calculating a new multi-particle state.
 # This is done for every unit multi_particle_state vector. Lastly summing their amplitude will result the new multi-particle state.
-    def H_manby_body(self, H_sb, multi_particle_state):
+    def H_manby_body(self, H_sb, multi_particle_state, interaction_strength = 0, NN = None):
         N, M = np.shape(H_sb)
         assert(N == M)
         new_state = self.zero_vector()
@@ -169,6 +170,11 @@ class Multi_particle_state:
                 
                             # Summing the new multi-particle state with the right coeff
                             new_state[new_index] += H_sb[i,j] * (-1)**k * (-1)**parity * multi_particle_state[index]
+
+            if interaction_strength != 0:
+                for i,j in NN:
+                    if (i in state_perm) and (j in state_perm):
+                        new_state[index] += interaction_strength * multi_particle_state[index]
         
         return new_state
 
