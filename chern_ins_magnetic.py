@@ -10,6 +10,21 @@ from mpl_toolkits.mplot3d import Axes3D
 from IQH_state import *
 from flux_attch import *
 
+def build_basic_H(Nx,Ny, hoppint_term = 1):
+    N = Nx * Ny
+    H = np.zeros((N,N), dtype= complex)
+    for x in range(Nx):
+        for y in range(Ny):
+            # cite_index = 2 * (Ny * x + y ) + sublattice
+            cite_A_index = Ny * x + y
+            cite_B_index = Ny * x + (y + 1) % Ny
+            H[cite_B_index,cite_A_index] = hoppint_term
+            H[cite_A_index,cite_B_index] = hoppint_term
+            cite_B_index = Ny * ((x + 1) % Nx) + y
+            H[cite_B_index,cite_A_index] = hoppint_term
+            H[cite_A_index,cite_B_index] = hoppint_term
+    return H
+
 def add_magnetic_field(H_real_space, p, q, Nx, Ny, cites_per_uc):
 # adding vector potential A = (0,Bx,0) in Landuo gague
     # for x in range(Nx):
@@ -171,10 +186,10 @@ def chern_number(Nx,Ny,p,q, model = 'basic'):
 # eigen_value_test(Nx=24,Ny=24,p=1,q=3, model = 'chern')
 
 #%%
-Nx = 3
-Ny = 3
+Nx = 2
+Ny = 6
 p = 1
-q = 3
+q = 1
 # model = 'basic'
 model = 'chern'
 
@@ -189,12 +204,12 @@ for n in range(len(C)):
 # s.t it will be in 1/3 of the non magnetic chern band and add 2 flux per electron 
 # and calculate the energy
 
-Nx = 3
-Ny = 3
+Nx = 2
+Ny = 6
 p = 1
 q = 3
 
-# electron number fill one 'Landu' level
+# electron number fill one 'Landau' level
 n = Nx * Ny // q
 
 H_real_space = build_H(Nx,Ny)
@@ -213,5 +228,5 @@ for x in range(Nx):
 
 # calculting the energy on the interaction with out mangetic field many body H
 # <psi|H_many_body|psi> / <psi|psi>
-E = np.matmul(state.T.conjugate(), mps.H_manby_body(H_real_space,state, interaction_strength=1, NN = NN)) / np.linalg.norm(state)
-print(E)
+E = np.matmul(state.T.conjugate(), mps.H_manby_body(H_real_space,state, interaction_strength=0.1, NN = NN)) / np.linalg.norm(state)
+print(E.real)
