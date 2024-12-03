@@ -122,7 +122,7 @@ class Multi_particle_state:
         sites = np.arange(N)
 
         # Generate all ordered permutations of length n
-        perms_array = np.array(list(permutations(sites, n)))
+        perms_array = permutations(sites, n)
         multi_particle_state_vector = self.zero_vector()
 
         for perm in perms_array:
