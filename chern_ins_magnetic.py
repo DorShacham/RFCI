@@ -6,6 +6,7 @@ from itertools import permutations, combinations
 from scipy.linalg import block_diag,dft,expm
 from tqdm import tqdm
 from mpl_toolkits.mplot3d import Axes3D
+from mpmath import *
 
 from IQH_state import *
 from flux_attch import *
@@ -181,41 +182,15 @@ def chern_number(Nx,Ny,p,q, model = 'basic'):
                 C[n] += F12
     return C
 
-def theta1(z, tau, N=100):
-    """
-    Calculate the Jacobi theta function θ₁(z, τ)
-    
-    Parameters:
-    z (complex): The first complex variable
-    tau (complex): The second complex variable (Im(τ) > 0)
-    N (int): Number of terms to sum in the series (default: 100)
-    
-    Returns:
-    complex: The value of θ₁(z, τ)
-    """
-    q = np.exp(np.pi * 1j * tau)
-    n = np.arange(-N, N+1, dtype=complex)
-    
-    # Calculate the series
-    series = np.sum((-1)**n * q**(n*(n+1)/2) * np.exp(2j * np.pi * n * z))
-    
-    # Multiply by the prefactor
-    prefactor = 1j * q**(1/8)
-    
-    return prefactor * series
+def print_band_and_C(Nx,Ny,p,q,model='chern'):
+
+    E = plot_BZ(Nx, Ny, p,q,model)
+    C = chern_number(Nx, Ny, p = p,q = q,model = model)
+    print(C)
+    for n in range(len(C)):
+        print(f"C_{n} = {C[n]}")
 
 
-def jacobi_theta1(z, tau, N = 100):
-    q = np.exp(1j * np.pi * tau)
-    n = np.arange(N)  # Adjust the number of terms for accuracy
-    return 2 * q**(1/4) * np.sum((-1)**n * q**(n*(n+1)) * np.sin((2*n+1)*z))
-
-
-def theta_function(z,tau,a,b,k_cutoff = 100):
-    k = np.arange(start=-k_cutoff,stop=k_cutoff + 1, dtype= complex)
-    result = np.exp(1j *np.pi * tau * (k + a)**2 ) * np.exp(1j * 2 * np.pi * (k + a) * (z + b))
-    result = np.sum(result)
-    return result
 
 # given a state @state and its @mps of the compact Hilbert space (size of N Choose n) calculate the new state in that space with flux attached.
 def flux_attch_on_torus_2_compact_state(state, mps, Nx, Ny):
@@ -228,9 +203,10 @@ def flux_attch_on_torus_2_compact_state(state, mps, Nx, Ny):
             for b in range(a):
                 za = cite_index_2_z(perm[a], mps, Ny)
                 zb = cite_index_2_z(perm[b], mps, Ny)
-                term = theta_function(z=(zb - za) / Nx, tau = 1j * Ny / Nx, a= 1/2, b = 1/2, k_cutoff=20) ** (-2)
-                # term = theta1(z = (zb - za) / Nx, tau = 1j * Ny / Nx, N=50) ** 2
-                # term = jacobi_theta1(z = (zb - za) / Nx, tau = 1j * Ny / Nx, N=100) ** 2
+                z = (zb - za) / Nx
+                tau = 1j * Ny / Nx
+                q = np.exp(1j * np.pi * tau)
+                term = jtheta(1,z,q)**2
                 if np.abs(term) > 1e-6:
                     flux_factor *= term / np.abs(term)
                     # flux_factor *= term 
@@ -246,25 +222,13 @@ def flux_attch_on_torus_2_compact_state(state, mps, Nx, Ny):
 # eigen_value_test(Nx=24,Ny=24,p=1,q=3, model = 'chern')
 
 #%%
-Nx = 36
-Ny = 36
-p = -1
-q = 3
-# model = 'basic'
-model = 'chern'
-
-E = plot_BZ(Nx, Ny, p,q,model)
-C = chern_number(Nx, Ny, p = p,q = q,model = model)
-print(C)
-for n in range(len(C)):
-    print(f"C_{n} = {C[n]}")
 
 # %%
 # Let us simulate taking a full magnetic chern band state and then increading the field (or turnning it off)
 # s.t it will be in 1/3 of the non magnetic chern band and add 2 flux per electron 
 # and calculate the energy
 
-Nx = 3
+Nx = 2
 Ny = 6
 p = -1
 q = 3
