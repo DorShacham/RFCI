@@ -31,12 +31,22 @@ H_real_space = build_H(Nx,Ny)
 H_real_space_magnetic = add_magnetic_field(np.array(H_real_space), p, q, Nx, Ny, cites_per_uc = 2)
 
 print("---1---")
+try:
+    IQH_state = np.load(f'data/Nx-{Nx}_Ny-{Ny}_q=3_magnetic.npy')
+    mps = Multi_particle_state(N = 2 * Nx * Ny,n=n)
+except:
+    print("Calculting IQH state")
+    IQH_state, mps = create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 1, H_sb = H_real_space_magnetic)
+    np.save(f'data/Nx-{Nx}_Ny-{Ny}_q=3_magnetic',IQH_state)
 
-IQH_state, mps = create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 1, H_sb = H_real_space_magnetic)
-np.save(f'data/Nx-{Nx}_Ny-{Ny}_q=3_magnetic',IQH_state)
-#%%
 print("---2----")
-eigenvalues, eigenvectors = exact_diagnolization(Nx, Ny, n=n, band_energy=band_energy, interaction_strength=interaction_strength,k=3,multi_process=False, save_result=False, show_result=False)
+try:
+    loaded = np.load(f'data/Nx-{Nx}_Ny-{Ny}_k-4.npz')
+    eigenvectors = loaded['a']
+except:
+    print("Calculting FQH states")
+    eigenvalues, eigenvectors = exact_diagnolization(Nx, Ny, n=n, band_energy=band_energy, interaction_strength=interaction_strength,k=4,multi_process=False, save_result=False, show_result=False)
+
 
 print("---3----")
 # building phase addition matrix
@@ -53,16 +63,24 @@ for index in range(len(IQH_state)):
 rows, cols = zip(*matrix_elements.keys())
 values = list(matrix_elements.values())
 sparse_matrix = sparse.csr_matrix((values, (rows, cols)))
-print_mp_state(IQH_state,Nx,Ny,mps)
+# print_mp_state(IQH_state,Nx,Ny,mps)
 
+#%%
+H_many_body = np.load_npz(f'results/Exact_Diagnolization/Nx-{Nx}_Ny-{Ny}/sparse_matrix.npz')
 
 for FQH in eigenvectors.T:
-    print_mp_state(FQH,Nx,Ny,mps)
+    # print_mp_state(FQH,Nx,Ny,mps)
     delta_phase = np.angle(IQH_state / FQH)
-    sol = sparse.linalg.lsqr(A = sparse_matrix, b= delta_phase,atol=0,btol=0,conlim=1e8,show=True)
+    sol = sparse.linalg.lsqr(A = sparse_matrix, b= delta_phase,atol=0,btol=0,conlim=0,show=False)
     x = sol[0]
     # reidue = np.exp(1j * (sparse_matrix @ x))  - np.exp(1j * delta_phase )
-    reidue = (((sparse_matrix @ x)  - delta_phase ) % (2 * np.pi)) / np.pi
+    reidue = (((sparse_matrix @ x)  - delta_phase ) ) / np.pi
     plt.figure()
-    plt.hist(reidue)
-    print(np.mean(np.abs(reidue)))
+    plt.hist(reidue,bins=100)
+    # print(np.mean((reidue)))
+
+    # calculting the energy on the interaction with out mangetic field many body H
+    # <psi|H_many_body|psi> / <psi|psi>
+    state = np.exp(1j *(sparse_matrix @ x)) * IQH_state
+    E = state.T.conjugate() @ (H_many_body @ state) / np.linalg.norm(state)**2
+    print(E.real)
