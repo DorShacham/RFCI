@@ -1,4 +1,11 @@
 #%%
+# import os
+# os.environ["OPENBLAS_NUM_THREADS"] = "10"
+# os.environ["MKL_NUM_THREADS"] = "10"
+# os.environ["NUMEXPR_NUM_THREADS"] = "10"
+
+# import numpy as np
+
 from exact_diagnolization import *
 from  IQH_state import *
 from chern_ins_magnetic import add_magnetic_field
@@ -8,7 +15,7 @@ import matplotlib.pyplot as plt
 
 
 
-Nx = 2
+Nx = 3
 Ny = 6
 p = -1
 q = 3
@@ -26,9 +33,10 @@ H_real_space_magnetic = add_magnetic_field(np.array(H_real_space), p, q, Nx, Ny,
 print("---1---")
 
 IQH_state, mps = create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 1, H_sb = H_real_space_magnetic)
-
+np.save(f'data/Nx-{Nx}_Ny-{Ny}_q=3_magnetic',IQH_state)
+#%%
 print("---2----")
-# eigenvalues, eigenvectors = exact_diagnolization(Nx, Ny, n=n, band_energy=band_energy, interaction_strength=interaction_strength,k=3,multi_process=False, save_result=False, show_result=False)
+eigenvalues, eigenvectors = exact_diagnolization(Nx, Ny, n=n, band_energy=band_energy, interaction_strength=interaction_strength,k=3,multi_process=False, save_result=False, show_result=False)
 
 print("---3----")
 # building phase addition matrix
