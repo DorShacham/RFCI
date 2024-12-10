@@ -66,7 +66,7 @@ sparse_matrix = sparse.csr_matrix((values, (rows, cols)))
 # print_mp_state(IQH_state,Nx,Ny,mps)
 
 #%%
-H_many_body = np.load_npz(f'results/Exact_Diagnolization/Nx-{Nx}_Ny-{Ny}/sparse_matrix.npz')
+H_many_body = sparse.load_npz(f'results/Exact_Diagnolization/Nx-{Nx}_Ny-{Ny}/sparse_matrix.npz')
 
 for FQH in eigenvectors.T:
     # print_mp_state(FQH,Nx,Ny,mps)
