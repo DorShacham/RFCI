@@ -3,6 +3,13 @@ from functools import partial
 import jax
 from jax import jacfwd, jacrev
 import jax.numpy as np
+from scipy.optimize import minimize
+import matplotlib.pyplot as plt
+import pickle
+import wandb
+# from jax.scipy.optimize import approx_fprime
+from tqdm import tqdm
+
 
 class Optimizer_reuslt:
     def __init__(self,function_value, x):
@@ -11,9 +18,9 @@ class Optimizer_reuslt:
 
 class VQE:
     def __init__(self,config):
+        self.config = config
         self.initial_state = config['initial_state']
         self.ansatz = config['ansatz']
-        self.ansatz_param_number = config['ansatz_param_number']
         self.hamiltonian = config['hamiltonian']
         self.cost_history_dict = {
             "prev_vector": None,
@@ -30,8 +37,7 @@ class VQE:
         else:
             self.loss = config['loss']
 
-        cost_for_grad = partial(cost_func, for_grad = False)
-        self.jacobian = jacfwd(cost_for_grad,(0))
+        self.config_i = config['config_i']
         
 
 
@@ -39,9 +45,9 @@ class VQE:
 
 # calculate the cost_function - the expection value of self.hamiltonian according to self.estimator
 # with self.ansatz(@params)
-    def cost_func(self,params, for_grad = True):
-        ansatz = partial(self.ansatz,params=params)
-        energy = my_estimator(self.initial_state, ansatz, self.hamiltonian)
+    def cost_func(self,params, for_grad = False):
+        state = self.ansatz.operate(params = params, state = self.initial_state)
+        energy = my_estimator(state, self.hamiltonian)
         cost = energy
 
         if (not for_grad):
@@ -50,11 +56,11 @@ class VQE:
             self.cost_history_dict["cost_history"].append(energy)
 
             if (self.config["cktp_iters"] is not None) and  (self.cost_history_dict["iters"] % self.config["cktp_iters"] == 0) and self.log:
-                print_mp_state(ansatz(self.initial_state), self.config['Nx'], self.config['Ny'], saveto=str(self.path) + str(f'/electron_density_{self.cost_history_dict["iters"]}.jpg'))
+                print_mp_state(state, self.config['Nx'], self.config['Ny'], saveto=str(self.path) + str(f'/electron_density_{self.cost_history_dict["iters"]}.jpg'))
                 wandb.log({"Electron Density": wandb.Image(str(self.path) + str(f'/electron_density_{self.cost_history_dict["iters"]}.jpg'), caption=f"Config {self.config_i} iter {self.cost_history_dict['iters']}")}, commit = False) 
         
         if self.ground_states is not None:
-            overlap = sbuspace_probability(ansatz(self.initial_state),subspace=self.ground_states)
+            overlap = sbuspace_probability(state,subspace=self.ground_states)
             if (not for_grad):
                 wandb.log({f'Overlap_{self.config_i}': overlap}, commit=False)
             if self.config['overlap_optimization']:
@@ -72,14 +78,18 @@ class VQE:
 
         return self.loss(cost)
 
+    def jacobian(self):
+        cost_for_grad = partial(self.cost_func, for_grad = True)
+        return jacfwd(cost_for_grad,(0))
          
 
 # start the optimization proccess. all data on optimization is saved in self.cost_history_dict
     def minimize(self):
         if self.config['random_initial_parametrs']:
-            x0 = 2 * np.pi * np.random.random(self.config['ansatz_param_number']) 
+            key = jax.random.PRNGKey(0)  # Initialize a random key
+            x0 = 2 * np.pi * jax.random.uniform(key, shape=(self.ansatz.num_parameters(),))
         else:
-            x0 = np.zeros(self.config['ansatz_param_number'])
+            x0 = np.zeros(self.ansatz.num_parameters())
 
         if self.config['optimizer'] == 'SPSA':
             spsa = SPSA(maxiter=300)
@@ -94,7 +104,8 @@ class VQE:
                 x0,
                 args=(),
                 method=self.config['optimizer'],
-                jac = self.jacobian,
+                # method="BFGS",
+                jac = self.jacobian(),
                 # method="cobyla",
                 # method="SLSQP",
                 # tol=0.00000001,
@@ -102,7 +113,7 @@ class VQE:
                 options = {
                 'ftol': 2.220446049250313e-09,  # Function tolerance
                 'gtol': 1e-08,  # Gradient tolerance
-                'eps': 1e-08,  # Step size for numerical approximation
+                # 'eps': 1e-08,  # Step size for numerical approximation
                 'maxiter': self.config['maxiter'],  # Maximum iterations
                 'maxfun': self.config['maxiter'],  # Maximum function evaluations
                 },
@@ -135,8 +146,7 @@ class VQE:
 
 
 # Calculate the expection value of @operator on final state from @qc with @initial_state
-def my_estimator(initial_state,qc,operator):
-    state = qc(initial_state)
+def my_estimator(state,operator):
     return ((state.T.conjugate() @ (operator @ state)) / (state.T.conjugate() @ state)).real
 
 # Calculate the probatility of @state_vector to be in the subspace spanned by the set @subspace

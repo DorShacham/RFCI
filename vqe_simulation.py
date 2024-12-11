@@ -2,7 +2,8 @@
 from argparse import ArgumentParser
 import yaml
 from exact_diagnolization import *
-from qiskit_simulation import *
+import qiskit_simulation
+import jax_simulation
 import wandb
 
 def lambda_constructor(loader, node):
@@ -30,21 +31,40 @@ if __name__ == "__main__":
 
     Nx = config['data']['Nx']
     Ny = config['data']['Ny']
-    extention_factor = config['data']['extention_factor']
     n = config['data']['n']
 
-    if log:
-        id = wandb.util.generate_id()
-        config['data']['id'] = id
+    if config['simulation_type'] == 'jax':
+        p = config['data']['p']
+        q = config['data']['q']
+        if log:
+                id = wandb.util.generate_id()
+                config['data']['id'] = id
 
-        wandb.init(
-            # set the wandb project where this run will be logged
-            project="RFCI-vqe",
-            name= f'Nx-{Nx}_Ny-{Ny}_EF-{extention_factor}/{id}',
-            id = id,
-            # track hyperparameters and run metadata
-            config= config
-            )
-    saving_path = str(f"results/vqe_simulation/Nx-{Nx}_Ny-{Ny}_EF-{extention_factor}/{config['data']['id']}")
-    vqe_simulation(Nx = Nx, Ny = Ny, config_list = config_list, n = n, extention_factor = extention_factor , pre_ansatz = None,saveto = saving_path, log = log)
+                wandb.init(
+                    # set the wandb project where this run will be logged
+                    project="RFCI-vqe",
+                    name= f"Nx-{Nx}_Ny-{Ny}_p-{p}_q-{q}/{id}",
+                    id = id,
+                    # track hyperparameters and run metadata
+                    config= config
+                    )
+        saving_path = str(f"results/vqe_simulation/jax/Nx-{Nx}_Ny-{Ny}_p-{p}_q-{q}/{id}")
+        jax_simulation.vqe_simulation(Nx = Nx, Ny = Ny, config_list = config_list, n = n, p=p, q=q, pre_ansatz = None,saveto = saving_path, log = log)
+    
+    else: #qiskit 
+        extention_factor = config['data']['extention_factor']
+        if log:
+            id = wandb.util.generate_id()
+            config['data']['id'] = id
+
+            wandb.init(
+                # set the wandb project where this run will be logged
+                project="RFCI-vqe",
+                name= f'Nx-{Nx}_Ny-{Ny}_EF-{extention_factor}/{id}',
+                id = id,
+                # track hyperparameters and run metadata
+                config= config
+                )
+        saving_path = str(f"results/vqe_simulation/Nx-{Nx}_Ny-{Ny}_EF-{extention_factor}/{config['data']['id']}")
+        qiskit_simulation.vqe_simulation(Nx = Nx, Ny = Ny, config_list = config_list, n = n, extention_factor = extention_factor , pre_ansatz = None,saveto = saving_path, log = log)
     

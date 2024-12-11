@@ -1,0 +1,30 @@
+data:
+  name: RFCI
+  Nx: 3
+  Ny: 3
+  extention_factor: 1
+  n: 
+  id: 
+
+resarach_question: 'tranlsation invariante test '
+
+config0:
+  band_energy: 1
+  interaction_strength: 0
+  ground_state_degeneracy: 1
+  overlap_optimization: True
+  translation_invariant_ansatz: False
+  anzts_reps: 1
+  flux_attch: False
+  maxiter: 100
+  random_initial_parametrs: True
+  loss: 
+  cooling_protocol: False
+  # optimizer: 'my_optimizer'
+  # optimizer: 'my_optimizer_V2'
+  optimizer: 'cobyla'
+  # optimizer: 'SPSA'
+  # optimizer: 'SLSQP'
+  # optimizer: 'cobyla'
+  # optimizer: 'SLSQP'
+  cktp_iters: 

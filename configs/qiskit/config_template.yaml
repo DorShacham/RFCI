@@ -1,3 +1,5 @@
+simulation_type: qiskit
+
 data:
   name: RFCI
   Nx: 3
