@@ -45,6 +45,7 @@ class VQE:
 
 # calculate the cost_function - the expection value of self.hamiltonian according to self.estimator
 # with self.ansatz(@params)
+    # @jax.jit
     def cost_func(self,params, for_grad = False):
         state = self.ansatz.operate(params = params, state = self.initial_state)
         energy = my_estimator(state, self.hamiltonian)
@@ -146,6 +147,7 @@ class VQE:
 
 
 # Calculate the expection value of @operator on final state from @qc with @initial_state
+# @jax.jit
 def my_estimator(state,operator):
     return ((state.T.conjugate() @ (operator @ state)) / (state.T.conjugate() @ state)).real
 

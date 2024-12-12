@@ -39,12 +39,19 @@ class Ansatz_class:
         
         self.phase_structure_matrix = sparse_matrix
 
+    def flux_gate(self, params,state):
+        return np.exp(1j * (self.phase_structure_matrix @ params)) * state
+
+
     def num_parameters(self):
         row, col = np.shape(self.phase_structure_matrix)
         return col
 
-    def operate(self, params,state):
-        return np.exp(1j * (self.phase_structure_matrix @ params)) * state
+    def operate(self, params, state):
+        returned_state = np.array(state)
+        returned_state = self.flux_gate(params=params,state=returned_state)
+        return returned_state
+        
 
     def assign_parameters(self, params):
         operate = partial(self.operate,params=params)

@@ -2,7 +2,7 @@ simulation_type: jax
 
 data:
   name: RFCI
-  Nx: 3
+  Nx: 2
   Ny: 6
   n: 
   id:
@@ -14,16 +14,16 @@ resarach_question: 'test'
 config0:
   band_energy: 1
   interaction_strength: 
-  ground_state_degeneracy: 3
+  ground_state_degeneracy: 
   overlap_optimization: False
   maxiter: 10000
-  random_initial_parametrs: False
+  random_initial_parametrs: True
   loss: 
   # optimizer: 'my_optimizer'
   # optimizer: 'my_optimizer_V2'
   # optimizer: 'cobyla'
   # optimizer: 'SPSA'
   # optimizer: 'SLSQP'
-  optimizer: 'cobyla'
-  # optimizer: 'SLSQP'
+  # optimizer: 'cobyla'
+  optimizer: 'BFGS'
   cktp_iters: 
