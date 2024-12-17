@@ -5,6 +5,7 @@ import jax
 import jax.numpy as np
 from  jax.experimental import sparse as jax_sparse
 from  scipy import sparse 
+from mpmath import *
 
 
 from IQH_state import *
@@ -18,6 +19,7 @@ class Ansatz_class:
     def __init__(self,Nx,Ny,IQH_state_mps):
         self.Nx = Nx
         self.Ny = Ny
+        self.mps = IQH_state_mps
 
         # building phase addition matrix
         mps = IQH_state_mps
@@ -42,6 +44,24 @@ class Ansatz_class:
     def flux_gate(self, params,state):
         return np.exp(1j * (self.phase_structure_matrix @ params)) * state
 
+    def flux_get_inital_params(self):
+        cite_number = 2 * self.Nx * self.Ny
+        mps_2_particles = Multi_particle_state(N=cite_number,n=2)
+        
+        init_params = mps_2_particles.zero_vector().astype(float)
+
+        for a in range(1 , cite_number):
+            for b in range(a):
+                za = cite_index_2_z(a, self.mps, self.Ny)
+                zb = cite_index_2_z(b, self.mps, self.Ny)
+                z = (zb - za) / self.Nx
+                tau = 1j *self.Ny / self.Nx
+                q = complex(np.exp(1j * np.pi * tau))
+                term = np.array(complex(jtheta(1,z,q)**2))
+                if np.abs(term) > 1e-6:
+                    init_params[mps_2_particles.perm_2_index((b,a))] = float(np.angle(term))
+
+        return init_params
 
     def num_parameters(self):
         row, col = np.shape(self.phase_structure_matrix)

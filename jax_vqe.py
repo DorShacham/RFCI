@@ -88,9 +88,11 @@ class VQE:
     def minimize(self):
         if self.config['random_initial_parametrs']:
             key = jax.random.PRNGKey(0)  # Initialize a random key
-            x0 = 2 * np.pi * jax.random.uniform(key, shape=(self.ansatz.num_parameters(),))
+            x0 = np.array(2 * np.pi * jax.random.uniform(key, shape=(self.ansatz.num_parameters(),),dtype=float))
         else:
-            x0 = np.zeros(self.ansatz.num_parameters())
+            # x0 = np.zeros(self.ansatz.num_parameters())
+            x0 = self.ansatz.flux_get_inital_params()
+
 
         if self.config['optimizer'] == 'SPSA':
             spsa = SPSA(maxiter=300)
