@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 
 
-Nx = 3
+Nx = 2
 Ny = 6
 p = -1
 q = 3
@@ -68,7 +68,7 @@ sparse_matrix = sparse.csr_matrix((values, (rows, cols)))
 #%%
 H_many_body = sparse.load_npz(f'results/Exact_Diagnolization/Nx-{Nx}_Ny-{Ny}/sparse_matrix.npz')
 
-for FQH in eigenvectors.T:
+for i, FQH in enumerate(eigenvectors.T):
     # print_mp_state(FQH,Nx,Ny,mps)
     delta_phase = np.angle(IQH_state / FQH)
     sol = sparse.linalg.lsqr(A = sparse_matrix, b= delta_phase,atol=0,btol=0,conlim=0,show=False)
@@ -77,10 +77,22 @@ for FQH in eigenvectors.T:
     reidue = (((sparse_matrix @ x)  - delta_phase ) ) / np.pi
     plt.figure()
     plt.hist(reidue,bins=100)
-    # print(np.mean((reidue)))
+    plt.title(f"residue for FQH_{i}")
 
+    plt.figure()
+    plt.scatter((delta_phase), (sparse_matrix @ x), color='blue', marker='.')
+
+# Customize the plot
+    plt.title(f"Scatter Plot for phases {i}")
+    plt.xlabel(f"arg(IQH_magnetic / FQH_{i})")
+    plt.ylabel(f"Esitimiated phase for FQH_{i}")
+
+    # Show the plot
+    plt.show()
     # calculting the energy on the interaction with out mangetic field many body H
     # <psi|H_many_body|psi> / <psi|psi>
     state = np.exp(1j *(sparse_matrix @ x)) * IQH_state
+    E = IQH_state.T.conjugate() @ (H_many_body @ IQH_state) / np.linalg.norm(IQH_state)**2
+    print(E.real)
     E = state.T.conjugate() @ (H_many_body @ state) / np.linalg.norm(state)**2
     print(E.real)

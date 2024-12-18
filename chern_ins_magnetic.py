@@ -141,7 +141,7 @@ def plot_BZ(Nx, Ny, p, q, model = 'basic'):
     ax.set_xlabel('kx')
     ax.set_ylabel('ky')
     ax.set_zlabel('E(kx, ky)')
-    ax.set_title('3D Plot of E(kx, ky)')
+    ax.set_title('E(kx, ky)')
 
     # Show the plot
     plt.show()
@@ -221,53 +221,58 @@ def flux_attch_on_torus_2_compact_state(state, mps, Nx, Ny):
 #%%
 # eigen_value_test(Nx=24,Ny=24,p=1,q=3, model = 'chern')
 
-#%%
+# #%%
+# Nx = 20
+# Ny = 60
+# p = -1 
+# q = 3
+# print_band_and_C(Nx,Ny,p,q,model='chern')
 
-#%%
-# Let us simulate taking a full magnetic chern band state and then increading the field (or turnning it off)
-# s.t it will be in 1/3 of the non magnetic chern band and add 2 flux per electron 
-# and calculate the energy
+# #%%
+# # Let us simulate taking a full magnetic chern band state and then increading the field (or turnning it off)
+# # s.t it will be in 1/3 of the non magnetic chern band and add 2 flux per electron 
+# # and calculate the energy
 
-Nx = 2
-Ny = 6
-p = -1
-q = 3
+# Nx = 2
+# Ny = 6
+# p = -1
+# q = 3
 
-# electron number fill one 'Landau' level
-n = Nx * Ny // q
+# # electron number fill one 'Landau' level
+# n = Nx * Ny // q
 
+# # H_real_space = build_H(Nx,Ny)
 # H_real_space = build_H(Nx,Ny)
-H_real_space = build_H(Nx,Ny)
-H_real_space_magnetic = add_magnetic_field(np.array(H_real_space), p, q, Nx, Ny, cites_per_uc = 2)
+# H_real_space_magnetic = add_magnetic_field(np.array(H_real_space), p, q, Nx, Ny, cites_per_uc = 2)
 
-print("---1---")
+# print("---1---")
 
-state, mps = create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 1, H_sb = H_real_space_magnetic)
+# state, mps = create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 1, H_sb = H_real_space_magnetic)
 
-print("---2---")
-
-
-# state = flux_attch_2_compact_state(np.array(state),mps,Ny)
-# state = flux_attch_on_torus_2_compact_state(np.array(state),mps,Nx,Ny)
-
-print("---3---")
+# print("---2---")
 
 
-print_mp_state(state,Nx,Ny,mps)
+# # state = flux_attch_2_compact_state(np.array(state),mps,Ny)
+# # state = flux_attch_on_torus_2_compact_state(np.array(state),mps,Nx,Ny)
+
+# print("---3---")
 
 
-NN = []
-for x in range(Nx):
-    for y in range(Ny):
-        n1 = cite_2_cite_index(x=x, y=y, sublattice=0, Ny=Ny)
-        for i in [0,1]:
-            for j in [0,1]:
-                n2 = cite_2_cite_index(x=(x - i) % Nx, y=(y - j) % Ny, sublattice=1, Ny=Ny)
-                NN.append((n1,n2))
+# print_mp_state(state,Nx,Ny,mps)
 
-# calculting the energy on the interaction with out mangetic field many body H
-# <psi|H_many_body|psi> / <psi|psi>
-E = np.matmul(state.T.conjugate(), mps.H_manby_body(H_real_space,state, interaction_strength=1, NN = NN)) / np.linalg.norm(state)**2
-print(E.real)
+
+# NN = []
+# for x in range(Nx):
+#     for y in range(Ny):
+#         n1 = cite_2_cite_index(x=x, y=y, sublattice=0, Ny=Ny)
+#         for i in [0,1]:
+#             for j in [0,1]:
+#                 n2 = cite_2_cite_index(x=(x - i) % Nx, y=(y - j) % Ny, sublattice=1, Ny=Ny)
+#                 NN.append((n1,n2))
+
+# # calculting the energy on the interaction with out mangetic field many body H
+# # <psi|H_many_body|psi> / <psi|psi>
+# E = np.matmul(state.T.conjugate(), mps.H_manby_body(H_real_space,state, interaction_strength=1, NN = NN)) / np.linalg.norm(state)**2
+# print(E.real)
 
 

@@ -13,7 +13,7 @@ resarach_question: 'phase optimization with inital theta guess + SLSQP optimizer
 
 config0:
   band_energy: 1
-  interaction_strength: 0.1
+  interaction_strength: 1
   ground_state_degeneracy: 
   overlap_optimization: False
   maxiter: 1000000
