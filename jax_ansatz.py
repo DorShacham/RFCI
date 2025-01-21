@@ -172,11 +172,11 @@ def create_ansatz_matrix(mps, lattice_shape, bonds):
                     if not in_cite1 and not in_cite2:
                         row_indices.append(index)
                         col_indices.append(index)
-                        data.append([4, 5, 0, 0])  # Placeholder for phase1 = exp(1j * e)
+                        data.append([1, 0, 0, 2])  # Placeholder for phase1 = exp(1j * e)
                     elif in_cite1 and in_cite2:
                         row_indices.append(index)
                         col_indices.append(index)
-                        data.append([5, 5, 0, 0])  # Placeholder for phase2 = exp(1j * f)
+                        data.append([2, 0, 0, 2])  # Placeholder for phase2 = exp(1j * f)
                     else:
                         cite_sum = cite_index_1 + cite_index_2
                         for j, cite_index in enumerate([cite_index_1, cite_index_2]):
@@ -194,7 +194,7 @@ def create_ansatz_matrix(mps, lattice_shape, bonds):
 
                                 row_indices.append(new_index)
                                 col_indices.append(index)
-                                data.append([1-j, j, k, parity])  # Placeholder for unitary_matrix[1-j,j] * (-1)**(k + parity)
+                                data.append([1-j, j, k + parity, 1])  # Placeholder for unitary_matrix[1-j,j] * (-1)**(k + parity)
 
     return jnp.array(data, dtype=np.float32), (row_indices), (col_indices), state_size
 
@@ -210,14 +210,19 @@ def compute_matrix_values(data, params):
     unitary_matrix = create_unitary_matrix(params)
     phase1 = jnp.exp(1j * e)
     phase2 = jnp.exp(1j * f)
+# j, k, l, switch_index = entry
+# @switch_index == 0: U(0,0) / U(1,1) [j,k =0,0 or j,j = 1,1]
+# @switch_index == 1: U(0,1) / U(0,1) * (-1)**(k + parity) [j,k = 0,1 or j,k = 1,0, l = k+ parity]
+# @switch_index == 2: phase1 / phase2 [j = 1 for phase1 and j = 2 for phase2]
+ 
 
     def compute_value(entry):
-        j, k, l, m = entry
-        return jax.lax.switch(jnp.sum(entry > 0),
+        j, k, l, switch_index = entry
+        return jax.lax.switch(switch_index,
             [
                 lambda: unitary_matrix[j.astype(int), k.astype(int)],
-                lambda: unitary_matrix[j.astype(int), k.astype(int)] * (-1)**(l.astype(int) + m.astype(int)),
-                lambda: jnp.where(j == 4, phase1, phase2)
+                lambda: unitary_matrix[j.astype(int), k.astype(int)] * (-1)**l.astype(int),
+                lambda: jnp.where(j == 1, phase1, phase2)
             ]
         )
 
