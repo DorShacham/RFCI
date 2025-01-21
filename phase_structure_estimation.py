@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 
 
-Nx = 2
+Nx = 3
 Ny = 6
 p = -1
 q = 3
@@ -47,7 +47,8 @@ except:
     print("Calculting FQH states")
     eigenvalues, eigenvectors = exact_diagnolization(Nx, Ny, n=n, band_energy=band_energy, interaction_strength=interaction_strength,k=4,multi_process=False, save_result=False, show_result=False)
 
-
+print_mp_state(IQH_state,Nx,Ny,mps)
+#%%
 print("---3----")
 # building phase addition matrix
 cite_number = 2 * Nx * Ny

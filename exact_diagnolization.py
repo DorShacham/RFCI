@@ -62,7 +62,7 @@ def multiprocess_map(func, iterable, max_workers, chunk_size):
 # @k - Number of eigenvalues/vectors to compute. @max_workers - If in multi-proccess mode, max number of workders.
 # If @from_memory True, load sparse matrix from meomory and diagnolize it.
 # return the eigenvalues, eigenvectors and save the results.
-def exact_diagnolization(Nx, Ny, n = None, band_energy = 1, interaction_strength = 1e-1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff = None  ,k = 10, multi_process = True, max_workers = 6, multiprocess_func=None, from_memory = False, save_result = True, show_result = True):
+def exact_diagnolization(Nx, Ny, n = None, H_sb = None, band_energy = 1, interaction_strength = 1e-1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff = None  ,k = 10, multi_process = False, max_workers = 6, multiprocess_func=None, from_memory = False, save_result = True, show_result = True):
 
     path = str(f'results/Exact_Diagnolization/Nx-{Nx}_Ny-{Ny}')
     N = 2 * Nx * Ny
@@ -73,17 +73,16 @@ def exact_diagnolization(Nx, Ny, n = None, band_energy = 1, interaction_strength
         # Number of electrons
         
         
-
-        H_sb = build_H(Nx=Nx, Ny=Ny, band_energy = band_energy, phi=phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff=element_cutoff)
+        if H_sb is None:
+            H_sb = build_H(Nx=Nx, Ny=Ny, band_energy = band_energy, phi=phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff=element_cutoff)
 
         NN = []
         for x in range(Nx):
             for y in range(Ny):
                 n1 = cite_2_cite_index(x=x, y=y, sublattice=0, Ny=Ny)
-                for i in [0,1]:
-                    for j in [0,1]:
-                        n2 = cite_2_cite_index(x=(x - i) % Nx, y=(y - j) % Ny, sublattice=1, Ny=Ny)
-                        NN.append((n1,n2))
+                for delta_x,delta_y in [(0,0), (0,-1), (-1,0), (-1,-1)]:
+                    n2 = cite_2_cite_index(x=(x + delta_x) % Nx, y=(y + delta_y) % Ny, sublattice=1, Ny=Ny)
+                    NN.append((n1,n2))
 
         
         v = mps.zero_vector()
@@ -147,4 +146,4 @@ def exact_diagnolization(Nx, Ny, n = None, band_energy = 1, interaction_strength
 
 
 if __name__ == "__main__":
-    eigenvalues, eigenvectors = exact_diagnolization(Nx=6, Ny=2, multi_process=True, max_workers=10, multiprocess_func=multiprocess_map,from_memory=False)
+    eigenvalues, eigenvectors = exact_diagnolization(Nx=6, Ny=2, multi_process=True, max_workers=10, multiprocess_func=multiprocess_map,from_memory=False,save_result=False,show_result=True)
