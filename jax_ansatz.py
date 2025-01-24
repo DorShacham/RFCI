@@ -11,7 +11,7 @@ os.environ['XLA_FLAGS'] = '--xla_force_host_platform_device_count={}'.format(os.
 import jax
 import jax.numpy as jnp
 from jax.experimental import sparse
-
+from jax import jit
 
 from IQH_state import *
 
@@ -33,6 +33,7 @@ from IQH_state import *
 # this ansatz will couble between state with electron in @cite_index_1 and @cite_index_2
 # parmas = (a,b,c,d,e,f) real vector from which the ansatz will be built
 # @return the state after acting on it with the ansatz
+
 def single_term_ansatz(state,mps,cite_index_1,cite_index_2,params):
     assert(not (cite_index_1 == cite_index_2)) # no self coupling
     a,b,c,d,e,f = params
@@ -121,10 +122,14 @@ lattice_shape = (Nx,Ny,sublattice)
 N = Nx * Ny
 n = 2 * N // 6
 mps = Multi_particle_state(2 * Nx * Ny, n)
-# state = mps.zero_vector()
-# state += 1
-# state = state / np.linalg.norm(state)
-# state[0] = 1
+state = mps.zero_vector()
+state[10000] = 1
+
+param_set = [(1,2,3,4,5,6)] * 4
+# param_set = [(0,2,0,0,0,0)] * 4
+new_state = translation_invariant_ansatz(jnp.array(state, dtype= complex),mps,lattice_shape, param_set)
+#%%
+
 H_real_space = build_H(Nx,Ny)
 IQH_state, mps = create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 1, H_sb = H_real_space)
 state = IQH_state
@@ -142,23 +147,43 @@ print_mp_state(new_state,Nx,Ny,mps)
 
 
 #%%
+import os
 import jax
+
+# Set the number of CPU devices JAX will use
+jax.config.update('jax_platforms', 'cpu')
+jax.config.update('jax_default_matmul_precision', 'float32')
+
+# Use all available CPUs
+os.environ['XLA_FLAGS'] = '--xla_force_host_platform_device_count={}'.format(os.cpu_count())
 import jax.numpy as jnp
+from jax.experimental import sparse
 from jax import jit, vmap
 import numpy as np
+from sympy import symbols, SparseMatrix, eye
+from tqdm import tqdm
 
-def create_ansatz_matrix(mps, lattice_shape, bonds):
+
+from IQH_state import *
+
+def create_ansatz_matrix(mps, lattice_shape):
     Nx, Ny, _ = lattice_shape
     n_sites = 2 * Nx * Ny
     state_size = len(mps.zero_vector())
+    bonds = [(0,0,1), (0,1,1), (-1,0,1), (-1,-1,1)]
+    symbols_list = []
+    ansatz_symbol_matrix = SparseMatrix(eye(state_size))
 
-    data = []
-    row_indices = []
-    col_indices = []
-
-    for bond in bonds:
+    for bond_index, bond in enumerate(bonds):
+        phase1, phase2, U00, U11, U01, U10 = symbols(f'phase1_{bond_index} phase2_{bond_index} U00_{bond_index} U11_{bond_index} U01_{bond_index} U10_{bond_index}')
+        symbols_list.append([phase1, phase2, U00, U11, U01, U10])
+        
         for x in range(Nx):
-            for y in range(Ny):
+            for y in tqdm(range(Ny)):
+                data = []
+                col_indices = []
+                row_indices = []
+
                 cite_index_1 = 2 * (Ny * x + y)
                 x2 = (x + bond[0]) % Nx
                 y2 = (y + bond[1]) % Ny
@@ -172,11 +197,11 @@ def create_ansatz_matrix(mps, lattice_shape, bonds):
                     if not in_cite1 and not in_cite2:
                         row_indices.append(index)
                         col_indices.append(index)
-                        data.append([1, 0, 0, 2])  # Placeholder for phase1 = exp(1j * e)
+                        data.append(phase1)  # Placeholder for phase1 = exp(1j * e)
                     elif in_cite1 and in_cite2:
                         row_indices.append(index)
                         col_indices.append(index)
-                        data.append([2, 0, 0, 2])  # Placeholder for phase2 = exp(1j * f)
+                        data.append(phase2)  # Placeholder for phase2 = exp(1j * f)
                     else:
                         cite_sum = cite_index_1 + cite_index_2
                         for j, cite_index in enumerate([cite_index_1, cite_index_2]):
@@ -190,21 +215,24 @@ def create_ansatz_matrix(mps, lattice_shape, bonds):
 
                                 row_indices.append(index)
                                 col_indices.append(index)
-                                data.append([j, j, 0, 0])  # Placeholder for unitary_matrix[j,j]
+                                data.append(U00 if j==0 else U11)  # Placeholder for unitary_matrix[j,j]
 
                                 row_indices.append(new_index)
                                 col_indices.append(index)
-                                data.append([1-j, j, k + parity, 1])  # Placeholder for unitary_matrix[1-j,j] * (-1)**(k + parity)
+                                data.append((U10 * (-1)**(k + parity)) if j==0 else (U01 * (-1)**(k + parity)))  # Placeholder for unitary_matrix[1-j,j] * (-1)**(k + parity)
 
-    return jnp.array(data, dtype=np.float32), (row_indices), (col_indices), state_size
+                matrix_dict = {(row, col): val for val, row, col in zip(data, row_indices, col_indices)}
+                single_term_matrix = SparseMatrix(state_size, state_size, matrix_dict)
+                ansatz_symbol_matrix = ansatz_symbol_matrix * single_term_matrix
 
-@jit
+    return ansatz_symbol_matrix, symbols_list
+#@jit
 def create_unitary_matrix(params):
     a, b, c, d, _, _ = params
     hermitian_matrix = jnp.array([[a, b - 1j * c], [b + 1j * c, d]])
     return jax.scipy.linalg.expm(1j * hermitian_matrix)
 
-@jit
+#@jit
 def compute_matrix_values(data, params):
     a, b, c, d, e, f = params
     unitary_matrix = create_unitary_matrix(params)
@@ -228,19 +256,18 @@ def compute_matrix_values(data, params):
 
     return vmap(compute_value)(data)
 
-@jit
+#@jit
 def apply_ansatz(state, data, row_indices, col_indices, matrix_shape, params):
+    print("substituting values")
     values = compute_matrix_values(data, params)
-    
-    # Custom sparse matrix-vector multiplication
-    def sparse_mv(v):
-        return jax.ops.segment_sum(
-            values * v[col_indices],
-            row_indices,
-            matrix_shape[0]
-        )
-    
-    return sparse_mv(state)
+    print("creaing spesific matrix")
+    print(len(values))
+    print(len(row_indices))
+    print(len(col_indices))
+    sparse_matrix = sparse.BCOO((values, (row_indices,col_indices)), shape=matrix_shape)
+    print("preforming multiplication")
+    return (sparse_matrix @ state)
+
 
 # Usage
 Nx, Ny, sublattice = 2, 6, 2
@@ -248,21 +275,24 @@ lattice_shape = (Nx, Ny, sublattice)
 N = Nx * Ny
 n = 2 * N // 6
 mps = Multi_particle_state(2 * Nx * Ny, n)
-bonds = [(0,0,1), (0,1,1), (-1,0,1), (-1,-1,1)]
 
-data, row_indices, col_indices, state_size = create_ansatz_matrix(mps, lattice_shape, bonds)
+print("Creating matrix")
+ansatz_symbol_matrix, symbols_list = create_ansatz_matrix(mps, lattice_shape)
+
+print("!!!!!!")
 matrix_shape = (state_size, state_size)
-
-# Convert to JAX arrays
-data = jnp.array(data, dtype=jnp.float32)
+data = jnp.array(data, dtype=jnp.int32)
 row_indices = jnp.array(row_indices, dtype=jnp.int32)
 col_indices = jnp.array(col_indices, dtype=jnp.int32)
 matrix_shape = jnp.array(matrix_shape, dtype=jnp.int32)
 
 state = jnp.zeros(state_size).at[0].set(1)
-params = jnp.array((1., 2., 3., 4., 5., 6.))
+params = jnp.array((1., 2., 3., 4., 5., 6.)) * 0
+print("Applying ansatz")
 new_state = apply_ansatz(state, data, row_indices, col_indices, matrix_shape, params)
 
+print("Calculating norms")
 print(jnp.linalg.norm(state))
 print(jnp.linalg.norm(new_state))
 
+print_mp_state(new_state,Nx,Ny,mps)
