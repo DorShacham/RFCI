@@ -160,6 +160,7 @@ import jax.numpy as jnp
 from jax.experimental import sparse
 from jax import jit, vmap
 import numpy as np
+import sympy
 from sympy import symbols, SparseMatrix, eye
 from tqdm import tqdm
 
@@ -172,9 +173,10 @@ def create_ansatz_matrix(mps, lattice_shape):
     state_size = len(mps.zero_vector())
     bonds = [(0,0,1), (0,1,1), (-1,0,1), (-1,-1,1)]
     symbols_list = []
-    ansatz_symbol_matrix = SparseMatrix(eye(state_size))
+    symbolic_matrix_list = []
 
     for bond_index, bond in enumerate(bonds):
+        bond_matrix = SparseMatrix(eye(state_size))
         phase1, phase2, U00, U11, U01, U10 = symbols(f'phase1_{bond_index} phase2_{bond_index} U00_{bond_index} U11_{bond_index} U01_{bond_index} U10_{bond_index}')
         symbols_list.append([phase1, phase2, U00, U11, U01, U10])
         
@@ -223,9 +225,10 @@ def create_ansatz_matrix(mps, lattice_shape):
 
                 matrix_dict = {(row, col): val for val, row, col in zip(data, row_indices, col_indices)}
                 single_term_matrix = SparseMatrix(state_size, state_size, matrix_dict)
-                ansatz_symbol_matrix = ansatz_symbol_matrix * single_term_matrix
-
-    return ansatz_symbol_matrix, symbols_list
+                bond_matrix = bond_matrix * single_term_matrix
+        
+        symbolic_matrix_list.append(sympy.matrices.immutable.ImmutableSparseMatrix(bond_matrix))
+    return symbolic_matrix_list, symbols_list
 #@jit
 def create_unitary_matrix(params):
     a, b, c, d, _, _ = params
@@ -233,42 +236,38 @@ def create_unitary_matrix(params):
     return jax.scipy.linalg.expm(1j * hermitian_matrix)
 
 #@jit
-def compute_matrix_values(data, params):
-    a, b, c, d, e, f = params
-    unitary_matrix = create_unitary_matrix(params)
-    phase1 = jnp.exp(1j * e)
-    phase2 = jnp.exp(1j * f)
-# j, k, l, switch_index = entry
-# @switch_index == 0: U(0,0) / U(1,1) [j,k =0,0 or j,j = 1,1]
-# @switch_index == 1: U(0,1) / U(0,1) * (-1)**(k + parity) [j,k = 0,1 or j,k = 1,0, l = k+ parity]
-# @switch_index == 2: phase1 / phase2 [j = 1 for phase1 and j = 2 for phase2]
- 
+def compute_numeric_matrix(symbolic_matrix_list,symbolic_params_list, params):
+    shape = symbolic_matrix_list[0].shape
+    numeric_matrix_list = []
+    for i, (symbolic_matrix, symbolic_params) in enumerate(zip(symbolic_matrix_list,symbolic_params_list)):
+        a, b, c, d, e, f = params[6 * i: 6 * i + 6]
+        U = create_unitary_matrix(params[6 * i: 6 * i + 6])
+        phase1 = jnp.exp(1j * e)
+        phase2 = jnp.exp(1j * f)
+        values = [phase1, phase2, U[0,0], U[1,1], U[0,1], U[1,0]]
+        values = [value.item() for value in values]
+        # Substitute values
+        substitutions = dict(zip(symbolic_params,values))
+        numeric_matrix = symbolic_matrix.subs(substitutions)
+        # creating jax matrix
+                # Separate the values and indices
+        col_list = numeric_matrix.col_list()
+        values = jnp.array([item[2] for item in col_list], dtype=complex)
+        indices = jnp.array([(item[0], item[1]) for item in col_list],dtype=int)
 
-    def compute_value(entry):
-        j, k, l, switch_index = entry
-        return jax.lax.switch(switch_index,
-            [
-                lambda: unitary_matrix[j.astype(int), k.astype(int)],
-                lambda: unitary_matrix[j.astype(int), k.astype(int)] * (-1)**l.astype(int),
-                lambda: jnp.where(j == 1, phase1, phase2)
-            ]
-        )
-
-    return vmap(compute_value)(data)
+        # scipy_sparse_matrix = sp.csr_matrix(_doktocsr(C_numeric))
+        jax_sparse_matrix = sparse.BCOO((values,indices),shape = shape)
+        numeric_matrix_list.append(jax_sparse_matrix)
+    return numeric_matrix_list
 
 #@jit
-def apply_ansatz(state, data, row_indices, col_indices, matrix_shape, params):
-    print("substituting values")
-    values = compute_matrix_values(data, params)
-    print("creaing spesific matrix")
-    print(len(values))
-    print(len(row_indices))
-    print(len(col_indices))
-    sparse_matrix = sparse.BCOO((values, (row_indices,col_indices)), shape=matrix_shape)
-    print("preforming multiplication")
-    return (sparse_matrix @ state)
+def apply_ansatz(state, numeric_matrix_list):
+    new_state = jnp.array(state)
+    for matrix in numeric_matrix_list:
+        new_state = matrix @ new_state
+    return new_state
 
-
+#%%
 # Usage
 Nx, Ny, sublattice = 2, 6, 2
 lattice_shape = (Nx, Ny, sublattice)
@@ -276,20 +275,18 @@ N = Nx * Ny
 n = 2 * N // 6
 mps = Multi_particle_state(2 * Nx * Ny, n)
 
+
 print("Creating matrix")
-ansatz_symbol_matrix, symbols_list = create_ansatz_matrix(mps, lattice_shape)
-
+symbolic_matrix_list, symbols_list = create_ansatz_matrix(mps, lattice_shape)
+#%%
 print("!!!!!!")
-matrix_shape = (state_size, state_size)
-data = jnp.array(data, dtype=jnp.int32)
-row_indices = jnp.array(row_indices, dtype=jnp.int32)
-col_indices = jnp.array(col_indices, dtype=jnp.int32)
-matrix_shape = jnp.array(matrix_shape, dtype=jnp.int32)
+state = jnp.array(mps.zero_vector()).at[0].set(1)
+params = jnp.array([1., 2., 3., 4., 5., 6.] * 4)
 
-state = jnp.zeros(state_size).at[0].set(1)
-params = jnp.array((1., 2., 3., 4., 5., 6.)) * 0
+print("Substitute values")
+numeric_matrix_list = compute_numeric_matrix(symbolic_matrix_list,symbols_list, params)
 print("Applying ansatz")
-new_state = apply_ansatz(state, data, row_indices, col_indices, matrix_shape, params)
+new_state = apply_ansatz(state, numeric_matrix_list)
 
 print("Calculating norms")
 print(jnp.linalg.norm(state))
