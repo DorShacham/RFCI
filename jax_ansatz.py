@@ -239,7 +239,7 @@ def create_unitary_matrix(params):
 def compute_numeric_matrix(symbolic_matrix_list,symbolic_params_list, params):
     shape = symbolic_matrix_list[0].shape
     numeric_matrix_list = []
-    for i, (symbolic_matrix, symbolic_params) in enumerate(zip(symbolic_matrix_list,symbolic_params_list)):
+    for i, (symbolic_matrix, symbolic_params) in tqdm(enumerate(zip(symbolic_matrix_list,symbolic_params_list))):
         a, b, c, d, e, f = params[6 * i: 6 * i + 6]
         U = create_unitary_matrix(params[6 * i: 6 * i + 6])
         phase1 = jnp.exp(1j * e)
@@ -248,11 +248,11 @@ def compute_numeric_matrix(symbolic_matrix_list,symbolic_params_list, params):
         values = [value.item() for value in values]
         # Substitute values
         substitutions = dict(zip(symbolic_params,values))
-        numeric_matrix = symbolic_matrix.subs(substitutions)
+        # numeric_matrix = symbolic_matrix.subs(substitutions)
         # creating jax matrix
                 # Separate the values and indices
-        col_list = numeric_matrix.col_list()
-        values = jnp.array([item[2] for item in col_list], dtype=complex)
+        col_list = symbolic_matrix.col_list()
+        values = jnp.array([item[2].subs(substitutions) for item in col_list], dtype=complex)
         indices = jnp.array([(item[0], item[1]) for item in col_list],dtype=int)
 
         # scipy_sparse_matrix = sp.csr_matrix(_doktocsr(C_numeric))
@@ -260,12 +260,19 @@ def compute_numeric_matrix(symbolic_matrix_list,symbolic_params_list, params):
         numeric_matrix_list.append(jax_sparse_matrix)
     return numeric_matrix_list
 
+def symbolic_state(symbolic_matrix_list, state):
+    new_state = state
+    for matrix in symbolic_matrix_list:
+        new_state = matrix * new_state
+    return new_state
+
 #@jit
 def apply_ansatz(state, numeric_matrix_list):
     new_state = jnp.array(state)
     for matrix in numeric_matrix_list:
         new_state = matrix @ new_state
     return new_state
+
 
 #%%
 # Usage
