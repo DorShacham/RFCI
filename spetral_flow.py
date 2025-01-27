@@ -7,7 +7,7 @@ import numpy as np
 Nx = 2
 Ny = 6
 
-for interaction_strength in [1e-1,1e-2,1e-3,1e-4]:
+for interaction_strength in [1,10,100,1000]:
     print(f"interaction strength = {interaction_strength}")
     phi_list = np.linspace(start=0,stop=3, num=72 + 1)
     eigenvalues_list = []
