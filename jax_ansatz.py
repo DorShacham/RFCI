@@ -1,4 +1,4 @@
-#%%
+#%% Naive version
 import os
 import jax
 
@@ -15,18 +15,6 @@ from jax import jit
 
 from IQH_state import *
 
-# def M(data):
-#     data_indices = [0,0,1]
-#     data = jnp.array([data[i] for i in data_indices])
-#     sparse_matrix = sparse.BCOO((data, indices), shape=(3, 3))
-#     return sparse_matrix
-
-
-
-# vector = jnp.array([1., 2., 3.])
-# result = (M([1,2]) @ vector)
-
-# print(result)
 
 # implimenting single term in translation invaritant ansatz. 
 # @state is a multi-particle compact state with @mps
@@ -104,15 +92,15 @@ def bond_ansatz_terms(state,mps,lattice_shape,bond,params):
 def translation_invariant_ansatz(state,mps,lattice_shape,params_set):
     new_state = state
     new_state = bond_ansatz_terms(new_state,mps,lattice_shape,bond=(0,0,1),params=params_set[0])
-    new_state = bond_ansatz_terms(new_state,mps,lattice_shape,bond=(0,-1,1),params=params_set[1])
+    new_state = bond_ansatz_terms(new_state,mps,lattice_shape,bond=(0,1,1),params=params_set[1])
     new_state = bond_ansatz_terms(new_state,mps,lattice_shape,bond=(-1,0,1),params=params_set[2])
-    new_state = bond_ansatz_terms(new_state,mps,lattice_shape,bond=(-1,-1,1),params=params_set[3])
+    new_state = bond_ansatz_terms(new_state,mps,lattice_shape,bond=(-1,1,1),params=params_set[3])
 
     return new_state
 
 
 
-#%%
+#%% 
 
 Nx = 2
 Ny = 6
@@ -123,7 +111,7 @@ N = Nx * Ny
 n = 2 * N // 6
 mps = Multi_particle_state(2 * Nx * Ny, n)
 state = mps.zero_vector()
-state[10000] = 1
+state[0] = 1
 
 param_set = [(1,2,3,4,5,6)] * 4
 # param_set = [(0,2,0,0,0,0)] * 4
@@ -146,7 +134,7 @@ print(np.linalg.norm(new_state))
 print_mp_state(new_state,Nx,Ny,mps)
 
 
-#%%
+#%% Sympy version - symbolicly calculting the ansatz matrix and then substitue
 import os
 import jax
 
@@ -300,3 +288,151 @@ print(jnp.linalg.norm(state))
 print(jnp.linalg.norm(new_state))
 
 print_mp_state(new_state,Nx,Ny,mps)
+
+
+#%% Jax version - calculting each sprase matrix and in each iteration substitue the parametrs and then compute the multiplaction
+#%%
+import jax
+import jax.numpy as jnp
+from jax import jit, vmap
+from jax.experimental import sparse
+
+import numpy as np
+from IQH_state import *
+
+
+def create_ansatz_matrix(mps, lattice_shape):
+    bonds = [(0,0,1), (0,1,1), (-1,0,1), (-1,1,1)]
+    Nx, Ny, _ = lattice_shape
+    n_sites = 2 * Nx * Ny
+    state_size = len(mps.zero_vector())
+
+    data_list = []
+    row_indices_list = []
+    col_indices_list = []
+
+    for bond in bonds:
+        for x in range(Nx):
+            for y in range(Ny):
+                data = []
+                row_indices = []
+                col_indices = []
+
+                cite_index_1 = 2 * (Ny * x + y)
+                x2 = (x + bond[0]) % Nx
+                y2 = (y + bond[1]) % Ny
+                cite_index_2 = 2 * (Ny * x2 + y2) + bond[2]
+
+                for index in range(state_size):
+                    state_perm = mps.index_2_perm(index)
+                    in_cite1 = cite_index_1 in state_perm
+                    in_cite2 = cite_index_2 in state_perm
+
+                    if not in_cite1 and not in_cite2:
+                        row_indices.append(index)
+                        col_indices.append(index)
+                        data.append([1, 0, 0, 2])  # Placeholder for phase1 = exp(1j * e)
+                    elif in_cite1 and in_cite2:
+                        row_indices.append(index)
+                        col_indices.append(index)
+                        data.append([2, 0, 0, 2])  # Placeholder for phase2 = exp(1j * f)
+                    else:
+                        cite_sum = cite_index_1 + cite_index_2
+                        for j, cite_index in enumerate([cite_index_1, cite_index_2]):
+                            if cite_index in state_perm:
+                                k = state_perm.index(cite_index)
+                                new_perm = list(state_perm)
+                                del new_perm[k]
+                                new_perm.insert(0, cite_sum - cite_index)
+                                parity, sorted_perm = permutation_parity(tuple(new_perm), return_sorted_array=True)
+                                new_index = mps.perm_2_index(sorted_perm)
+
+                                row_indices.append(index)
+                                col_indices.append(index)
+                                data.append([j, j, 0, 0])  # Placeholder for unitary_matrix[j,j]
+
+                                row_indices.append(new_index)
+                                col_indices.append(index)
+                                data.append([1-j, j, k + parity, 1])  # Placeholder for unitary_matrix[1-j,j] * (-1)**(k + parity)
+                
+                data_list.append(jnp.array(data, dtype=jnp.int32))
+                row_indices_list.append(jnp.array(row_indices, dtype=jnp.int32))
+                col_indices_list.append(jnp.array(col_indices, dtype=jnp.int32))
+
+                    
+
+    return data_list, row_indices_list, col_indices_list
+
+# @jit
+def create_unitary_matrix(params):
+    a, b, c, d, _, _ = params
+    hermitian_matrix = jnp.array([[a, b - 1j * c], [b + 1j * c, d]])
+    return jax.scipy.linalg.expm(1j * hermitian_matrix)
+
+# @jit
+def compute_matrix_values(data, params):
+    a, b, c, d, e, f = params
+    unitary_matrix = create_unitary_matrix(params)
+    phase1 = jnp.exp(1j * e)
+    phase2 = jnp.exp(1j * f)
+# j, k, l, switch_index = entry
+# @switch_index == 0: U(0,0) / U(1,1) [j,k =0,0 or j,j = 1,1]
+# @switch_index == 1: U(0,1) / U(0,1) * (-1)**(k + parity) [j,k = 0,1 or j,k = 1,0, l = k+ parity]
+# @switch_index == 2: phase1 / phase2 [j = 1 for phase1 and j = 2 for phase2]
+ 
+
+    def compute_value(entry):
+        j, k, l, switch_index = entry
+        return jax.lax.switch(switch_index,
+            [
+                lambda: unitary_matrix[j.astype(int), k.astype(int)],
+                lambda: unitary_matrix[j.astype(int), k.astype(int)] * (-1)**l.astype(int),
+                lambda: jnp.where(j == 1, phase1, phase2)
+            ]
+        )
+
+    return vmap(compute_value)(data)
+
+# @jit
+def apply_single_matrix(state,data,row_indices,col_indices,params):
+    matrix_shape = (len(state), len(state))
+    values = compute_matrix_values(data,params)
+    indices = jnp.column_stack((row_indices, col_indices))
+    jax_sparse_matrix = sparse.BCOO((values,indices),shape = matrix_shape)
+    return (jax_sparse_matrix @ state)
+
+
+# @jit
+def apply_ansatz(state, data_list, row_indices_list, col_indices_list, param_set):
+    num_param_in_set = 6
+    new_state = jnp.array(state, dtype=complex)
+    for i, (data,row_indices,col_indices) in enumerate(zip(data_list,row_indices_list,col_indices_list)):
+        new_state = apply_single_matrix(new_state,data,row_indices,col_indices,param_set[num_param_in_set * i : num_param_in_set * i + num_param_in_set])
+    return new_state
+
+# Usage
+Nx, Ny, sublattice = 2, 6, 2
+lattice_shape = (Nx, Ny, sublattice)
+N = Nx * Ny
+n = 2 * N // 6
+mps = Multi_particle_state(2 * Nx * Ny, n)
+
+data_list, row_indices_list, col_indices_list = create_ansatz_matrix(mps, lattice_shape)
+
+# # Convert to JAX arrays
+# data = jnp.array(data, dtype=jnp.float32)
+# row_indices = jnp.array(row_indices, dtype=jnp.int32)
+# col_indices = jnp.array(col_indices, dtype=jnp.int32)
+# matrix_shape = jnp.array(matrix_shape, dtype=jnp.int32)
+
+state = jnp.array(mps.zero_vector()).at[0].set(1)
+params = jnp.array([1., 2., 3., 4., 5., 6.] * 4 * 12)
+#%%
+new_state = apply_ansatz(state, data_list, row_indices_list, col_indices_list, params)
+
+print(jnp.linalg.norm(state))
+print(jnp.linalg.norm(new_state))
+
+print_mp_state(state,Nx,Ny,mps)
+print_mp_state(new_state,Nx,Ny,mps)
+
