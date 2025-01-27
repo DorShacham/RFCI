@@ -58,6 +58,13 @@ def apply_single_matrix(state,data,row_indices,col_indices,params):
     jax_sparse_matrix = sparse.BCOO((values,indices),shape = matrix_shape)
     return (jax_sparse_matrix @ state)
 
+@jit
+def _apply_ansatz(state, param_set, data_list, row_indices_list, col_indices_list):
+        num_bonds = 4
+        new_state = jnp.array(state, dtype=complex)
+        for i, (data,row_indices,col_indices) in enumerate(zip(data_list, row_indices_list, col_indices_list)):
+            new_state = apply_single_matrix(new_state,data,row_indices,col_indices,param_set[i // num_bonds])
+        return new_state
 
 
 # A class that act with a translation invariante ansatz on a lattice of (@Nx,@Ny) with 2 sublattice cites and @n electrons
@@ -130,13 +137,8 @@ class Jax_TV_ansatz:
     # appy the ansatz on the @state and return the new_state
     # param_set - the parametrs that parametrize the ansatz, assume to take this form:
     # param_set = [[bond_1_params], [bond_2_params], [bond_3_params], [bond_4_params]], where [bond_n_params] = [a,b,c,d,e,f] real numbers
-    @jit
     def apply_ansatz(self, state, param_set):
-        num_bonds = 4
-        new_state = jnp.array(state, dtype=complex)
-        for i, (data,row_indices,col_indices) in enumerate(zip(self.data_list, self.row_indices_list, self.col_indices_list)):
-            new_state = apply_single_matrix(new_state,data,row_indices,col_indices,param_set[i // num_bonds])
-        return new_state
+        return _apply_ansatz(state, param_set, self.data_list, self.row_indices_list, self.col_indices_list)
 
 # Usage
 Nx = 2
