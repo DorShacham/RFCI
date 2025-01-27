@@ -7,9 +7,9 @@ import numpy as np
 Nx = 2
 Ny = 6
 
-for interaction_strength in [0,0.1,1,10,100]:
-
-    phi_list = np.linspace(start=0,stop=3, num=12 + 1)
+for interaction_strength in [1e-1,1e-2,1e-3,1e-4]:
+    print(f"interaction strength = {interaction_strength}")
+    phi_list = np.linspace(start=0,stop=3, num=72 + 1)
     eigenvalues_list = []
     for i, phi in enumerate(phi_list):
         eigenvalues, eigenvectors = exact_diagnolization(Nx=Nx, Ny=Ny,phase_shift_y=phi * 2 * np.pi, interaction_strength=interaction_strength ,k=7, multi_process=False,multiprocess_func=multiprocess_map, save_result= False, show_result=False)
@@ -30,7 +30,6 @@ for interaction_strength in [0,0.1,1,10,100]:
     
     plt.title(f"Spectral flow with interaction strentgh\n of {interaction_strength} for ({Nx,Ny}) lattice \n(first 7 eigenvalues shifted by the lowest value)")
     plt.savefig(f"./results/spectral_flow/interaction_shift/Nx-{Nx}_Ny-{Ny}/1_interaction-{interaction_strength}.jpg")
-
 
 
     plt.figure()

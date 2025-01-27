@@ -171,7 +171,7 @@ def create_ansatz_matrix(mps, lattice_shape):
     Nx, Ny, _ = lattice_shape
     n_sites = 2 * Nx * Ny
     state_size = len(mps.zero_vector())
-    bonds = [(0,0,1), (0,1,1), (-1,0,1), (-1,-1,1)]
+    bonds = [(0,0), (0,1), (-1,0), (-1,1)]
     symbols_list = []
     symbolic_matrix_list = []
 
