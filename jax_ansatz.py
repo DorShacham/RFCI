@@ -154,7 +154,7 @@ class Jax_TV_ansatz:
     # param_set - the parametrs that parametrize the ansatz. After ordering takes this form
     # ordered_params = [[bond_1_params], [bond_1_params], ..., [bond_2_params], [bond_2_params], ... [bond_4_params]], 
     # where [bond_n_params] = [a,b,c,d,e,f] real numbers
-    def apply_ansatz(self, state, param_set):
+    def apply_ansatz(self, param_set, state):
         system_size = self.Nx * self.Ny
         ordered_params = [[param_set[i * self.params_per_bond: (i + 1) * self.params_per_bond]] * system_size for i in range(self.num_bonds)]
         ordered_params = [item for sublist in ordered_params for item in sublist]
@@ -215,9 +215,10 @@ class Jax_FA_ansatz:
         mps = IQH_state_mps
         cite_number = 2 * Nx * Ny
         mps_2_particles = Multi_particle_state(N=cite_number,n=2)
+        state_size = len(mps.zero_vector())
         matrix_elements = {}
         # A = jnp.zeros((len(mps.zero_vector()),len(mps_2_particles.zero_vector())))
-        for index in range(len(mps.zero_vector())):
+        for index in range(state_size):
             state_perm = mps.index_2_perm(index)
             for cite1 in range(1, len(state_perm)):
                 for cite2 in range(cite1):
@@ -226,8 +227,10 @@ class Jax_FA_ansatz:
 
         rows, cols = zip(*matrix_elements.keys())
         values = list(matrix_elements.values())
-        sparse_matrix = sparse.csr_matrix((values, (rows, cols)))
-        sparse_matrix = jax_sparse.BCOO.from_scipy_sparse(sparse_matrix)
+        indices = jnp.column_stack((jnp.array(rows), jnp.array(cols)))
+        sparse_matrix = sparse.BCOO((values,indices),shape = (state_size, len(mps_2_particles.zero_vector())))
+        # sparse_matrix = sparse.csr_matrix((values, (rows, cols)))
+        # sparse_matrix = jax_sparse.BCOO.from_scipy_sparse(sparse_matrix)
         
         self.phase_structure_matrix = sparse_matrix
 
@@ -261,3 +264,52 @@ class Jax_FA_ansatz:
     def assign_parameters(self, params):
         operate = partial(self.operate,params=params)
         return operate
+
+
+########
+# A class that unify the complete jax ansatz
+# made of U_ansatz = U_local_after @ U_flux @ U_local_before
+
+class Jax_ansatz:
+    def __init__(self,Nx,Ny,n):
+        IQH_state_mps =  Multi_particle_state(2 * Nx * Ny, n)
+        self.flux_gate = Jax_FA_ansatz(Nx = Nx, Ny = Ny, IQH_state_mps = IQH_state_mps)
+        self.local_gate = Jax_TV_ansatz(Nx = Nx, Ny = Ny, n = n)
+
+        self.flux_gate_param_num = self.flux_gate.num_parameters()
+        self.local_gate_param_num = self.local_gate.num_parameters()
+    
+    # The first flux_gate_param_num is for the flux gate
+    # after that local_gate_param_num for the local before gate 
+    # after that local_gate_param_num for the local after gate
+    def apply_ansatz(self, params, state):
+        flux_params = params[:self.flux_gate_param_num]
+        local_before_params = params[self.flux_gate_param_num: self.flux_gate_param_num + self.local_gate_param_num]
+        local_after_params = params[self.flux_gate_param_num + self.local_gate_param_num:]
+
+        U_before_state = self.local_gate.apply_ansatz(param_set=local_before_params, state= jnp.array(state))
+        U_flux_U_before_state = self.flux_gate.apply_ansatz(params=flux_params, state=U_before_state)
+        U_after_U_flux_U_before_state = self.local_gate.apply_ansatz(param_set=local_after_params, state= U_flux_U_before_state)
+        return U_after_U_flux_U_before_state
+
+    def num_parameters(self):
+        return (self.flux_gate_param_num + self.local_gate_param_num * 2)
+
+# #%%
+# import jax.random as random
+# key = random.PRNGKey(0)
+
+# Nx = 2
+# Ny = 6
+# n = 4
+# ansatz = Jax_ansatz(Nx,Ny,n)
+# # state = jnp.zeros(ansatz.local_gate.state_size).at[0].set(1)
+# # mps = Multi_particle_state(2 * Nx * Ny, n)
+# state, mps = create_IQH_in_extendend_lattice(Nx,Ny, n)
+# state = jnp.array(state)
+# #%%
+# key = random.PRNGKey(3)
+# random_params = random.uniform(key, shape=(ansatz.num_parameters(),))
+# random_params = random_params.at[:ansatz.flux_gate.num_parameters()].set(ansatz.flux_gate.get_inital_params())
+# new_state = ansatz.apply_ansatz(random_params, state)
+# print_mp_state(new_state,Nx,Ny,mps)
