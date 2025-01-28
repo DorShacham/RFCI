@@ -15,67 +15,6 @@ from exact_diagnolization import exact_diagnolization
 
 
 
-class Ansatz_class:
-    def __init__(self,Nx,Ny,IQH_state_mps):
-        self.Nx = Nx
-        self.Ny = Ny
-        self.mps = IQH_state_mps
-
-        # building phase addition matrix
-        mps = IQH_state_mps
-        cite_number = 2 * Nx * Ny
-        mps_2_particles = Multi_particle_state(N=cite_number,n=2)
-        matrix_elements = {}
-        # A = np.zeros((len(mps.zero_vector()),len(mps_2_particles.zero_vector())))
-        for index in range(len(mps.zero_vector())):
-            state_perm = mps.index_2_perm(index)
-            for cite1 in range(1, len(state_perm)):
-                for cite2 in range(cite1):
-                    matrix_elements[(index, mps_2_particles.perm_2_index((state_perm[cite2],state_perm[cite1])))] = 1
-                    # A = A.at[[index, mps_2_particles.perm_2_index((state_perm[cite2],state_perm[cite1]))]].set(1)
-
-        rows, cols = zip(*matrix_elements.keys())
-        values = list(matrix_elements.values())
-        sparse_matrix = sparse.csr_matrix((values, (rows, cols)))
-        sparse_matrix = jax_sparse.BCOO.from_scipy_sparse(sparse_matrix)
-        
-        self.phase_structure_matrix = sparse_matrix
-
-    def flux_gate(self, params,state):
-        return np.exp(1j * (self.phase_structure_matrix @ params)) * state
-
-    def flux_get_inital_params(self):
-        cite_number = 2 * self.Nx * self.Ny
-        mps_2_particles = Multi_particle_state(N=cite_number,n=2)
-        
-        init_params = mps_2_particles.zero_vector().astype(float)
-
-        for a in range(1 , cite_number):
-            for b in range(a):
-                za = cite_index_2_z(a, self.mps, self.Ny)
-                zb = cite_index_2_z(b, self.mps, self.Ny)
-                z = (zb - za) / self.Nx
-                tau = 1j *self.Ny / self.Nx
-                q = complex(np.exp(1j * np.pi * tau))
-                term = np.array(complex(jtheta(1,z,q)**2))
-                if np.abs(term) > 1e-6:
-                    init_params[mps_2_particles.perm_2_index((b,a))] = float(np.angle(term))
-
-        return init_params
-
-    def num_parameters(self):
-        row, col = np.shape(self.phase_structure_matrix)
-        return col
-
-    def operate(self, params, state):
-        returned_state = np.array(state)
-        returned_state = self.flux_gate(params=params,state=returned_state)
-        return returned_state
-        
-
-    def assign_parameters(self, params):
-        operate = partial(self.operate,params=params)
-        return operate
 
 
 def build_H_many_body(Nx, Ny, interaction_strength = 1e-1, band_energy = 1):

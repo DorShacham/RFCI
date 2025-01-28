@@ -15,11 +15,13 @@ from jax.experimental import sparse
 from jax import jit, vmap
 import numpy as np
 from tqdm import tqdm
+from flux_attch import *
+from mpmath import *
 
-from IQH_state import Multi_particle_state, permutation_parity
-from IQH_state import print_mp_state
 
+from IQH_state import *
 
+# All the function for the Transliation Invariant Ansatz
 @jit
 def create_unitary_matrix(params):
     a, b, c, d, _, _ = params
@@ -59,15 +61,7 @@ def apply_single_matrix(state,data,row_indices,col_indices,params):
     return (jax_sparse_matrix @ state)
 
 @jit
-def _apply_ansatz(state, param_set, data_list, row_indices_list, col_indices_list):
-        num_bonds = 4
-        new_state = jnp.array(state, dtype=complex)
-        for i, (data,row_indices,col_indices) in enumerate(zip(data_list, row_indices_list, col_indices_list)):
-            new_state = apply_single_matrix(new_state,data,row_indices,col_indices,param_set[i // num_bonds])
-        return new_state
-
-@jit
-def _apply_ansatz(state, param_set, data_array, row_indices_array, col_indices_array):
+def _apply_TV_ansatz(state, param_set, data_array, row_indices_array, col_indices_array):
     num_bonds = 4
 
     def scan_body(state, inputs):
@@ -87,6 +81,11 @@ def _apply_ansatz(state, param_set, data_array, row_indices_array, col_indices_a
 class Jax_TV_ansatz:
     def __init__(self, Nx, Ny, n):
         bonds = [(0,0,1), (0,1,1), (-1,0,1), (-1,1,1)] # NN of the model
+        self.num_bonds = len(bonds)
+        self.params_per_bond = 6
+        self.Nx = Nx
+        self.Ny = Ny
+
         mps = Multi_particle_state(2 * Nx * Ny, n)
         state_size = len(mps.zero_vector())
         
@@ -147,37 +146,118 @@ class Jax_TV_ansatz:
         self.data_array = jnp.array(data_list)
         self.row_indices_array = jnp.array(row_indices_list)
         self.col_indices_array = jnp.array(col_indices_list)
+
         
 
 
     # appy the ansatz on the @state and return the new_state
-    # param_set - the parametrs that parametrize the ansatz, assume to take this form:
-    # param_set = [[bond_1_params], [bond_2_params], [bond_3_params], [bond_4_params]], where [bond_n_params] = [a,b,c,d,e,f] real numbers
+    # param_set - the parametrs that parametrize the ansatz. After ordering takes this form
+    # ordered_params = [[bond_1_params], [bond_1_params], ..., [bond_2_params], [bond_2_params], ... [bond_4_params]], 
+    # where [bond_n_params] = [a,b,c,d,e,f] real numbers
     def apply_ansatz(self, state, param_set):
-        return _apply_ansatz(state, jnp.array(param_set), self.data_array, self.row_indices_array, self.col_indices_array)
+        system_size = self.Nx * self.Ny
+        ordered_params = [[param_set[i * self.params_per_bond: (i + 1) * self.params_per_bond]] * system_size for i in range(self.num_bonds)]
+        ordered_params = [item for sublist in ordered_params for item in sublist]
+        return _apply_TV_ansatz(state, jnp.array(ordered_params), self.data_array, self.row_indices_array, self.col_indices_array)
 
-# Usage
-Nx = 2
-Ny = 6
-N = Nx * Ny
-n = 2 * N // 6
-mps = Multi_particle_state(2 * Nx * Ny, n)
 
-state = jnp.array(mps.zero_vector()).at[0].set(1)
-params = jnp.array([[1., 2., 3., 4., 5., 6.]] * 4 * Nx * Ny)
+    def num_parameters(self):
+        param_number =  self.num_bonds * self.params_per_bond
+        return param_number
 
-ansatz = Jax_TV_ansatz(Nx, Ny, n)
 
-#%%
-start = time.time()
-for i in range(1000):
-    new_state = ansatz.apply_ansatz(state,params)
-end = time.time()
 
-print((end - start) / 1000)
-print(jnp.linalg.norm(state))
-print(jnp.linalg.norm(new_state))
+# #####
+# # Usage
+# Nx = 2
+# Ny = 6
+# N = Nx * Ny
+# n = 2 * N // 6
+# mps = Multi_particle_state(2 * Nx * Ny, n)
 
-# print_mp_state(state,Nx,Ny,mps)
-# print_mp_state(new_state2,Nx,Ny,mps)
+# state = jnp.array(mps.zero_vector()).at[0].set(1)
+# params = jnp.array([1., 2., 3., 4., 5., 6.] * 4 )
 
+# ansatz = Jax_TV_ansatz(Nx, Ny, n)
+
+# #%%
+# import time
+
+# start = time.time()
+# for i in range(1000):
+#     new_state = ansatz.apply_ansatz(state,params)
+# end = time.time()
+
+# print((end - start) / 1000)
+# print(jnp.linalg.norm(state))
+# print(jnp.linalg.norm(new_state))
+
+# # print_mp_state(state,Nx,Ny,mps)
+# # print_mp_state(new_state,Nx,Ny,mps)
+
+
+
+
+###########################################
+# All the function and call for the flux attachment ansatz
+
+@jit
+def _apply_FA_ansatz(phase_structure_matrix, params,state):
+    return jnp.exp(1j * (phase_structure_matrix @ params)) * state
+
+class Jax_FA_ansatz:
+    def __init__(self,Nx,Ny,IQH_state_mps):
+        self.Nx = Nx
+        self.Ny = Ny
+        self.mps = IQH_state_mps
+
+        # building phase addition matrix
+        mps = IQH_state_mps
+        cite_number = 2 * Nx * Ny
+        mps_2_particles = Multi_particle_state(N=cite_number,n=2)
+        matrix_elements = {}
+        # A = jnp.zeros((len(mps.zero_vector()),len(mps_2_particles.zero_vector())))
+        for index in range(len(mps.zero_vector())):
+            state_perm = mps.index_2_perm(index)
+            for cite1 in range(1, len(state_perm)):
+                for cite2 in range(cite1):
+                    matrix_elements[(index, mps_2_particles.perm_2_index((state_perm[cite2],state_perm[cite1])))] = 1
+                    # A = A.at[[index, mps_2_particles.perm_2_index((state_perm[cite2],state_perm[cite1]))]].set(1)
+
+        rows, cols = zip(*matrix_elements.keys())
+        values = list(matrix_elements.values())
+        sparse_matrix = sparse.csr_matrix((values, (rows, cols)))
+        sparse_matrix = jax_sparse.BCOO.from_scipy_sparse(sparse_matrix)
+        
+        self.phase_structure_matrix = sparse_matrix
+
+    def apply_ansatz(self, params,state):
+        return _apply_FA_ansatz(self.phase_structure_matrix, params, state)
+
+    def get_inital_params(self):
+        cite_number = 2 * self.Nx * self.Ny
+        mps_2_particles = Multi_particle_state(N=cite_number,n=2)
+        
+        init_params = mps_2_particles.zero_vector().astype(float)
+
+        for a in range(1 , cite_number):
+            for b in range(a):
+                za = cite_index_2_z(a, self.mps, self.Ny)
+                zb = cite_index_2_z(b, self.mps, self.Ny)
+                z = (zb - za) / self.Nx
+                tau = 1j *self.Ny / self.Nx
+                q = complex(np.exp(1j *jnp.pi * tau))
+                term = jnp.array(complex(jtheta(1,z,q)**2))
+                if jnp.abs(term) > 1e-6:
+                    init_params[mps_2_particles.perm_2_index((b,a))] = float(np.angle(term))
+
+        return init_params
+
+    def num_parameters(self):
+        row, col = jnp.shape(self.phase_structure_matrix)
+        return col
+        
+
+    def assign_parameters(self, params):
+        operate = partial(self.operate,params=params)
+        return operate
