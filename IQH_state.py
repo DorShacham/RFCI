@@ -243,7 +243,7 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, phi = np.pi/4, phase_shift_x = 0, p
 # in the x direction
 # if H_sb is not None build the state according to it
 # return the state vector, extended_mps
-def create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor, band_energy = 1, H_sb = None):
+def create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 1, H_sb = None):
     N = 2 * Nx * Ny
     if H_sb is None:
         H_real_space = build_H(Nx, Ny, band_energy)
