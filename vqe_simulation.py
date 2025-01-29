@@ -26,7 +26,6 @@ if __name__ == "__main__":
     parser.add_argument('--save', action='store_true', help='Save results localy')
     
     args = parser.parse_args()
-    print(args.log)
     
     config_file = args.config_path
     # config_file = './config.yaml'

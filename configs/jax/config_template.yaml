@@ -2,8 +2,8 @@ simulation_type: jax
 
 data:
   name: RFCI
-  Nx: 2
-  Ny: 6
+  Nx: 3
+  Ny: 3
   n: 
   id:
   p: -1
@@ -14,9 +14,10 @@ resarach_question: 'test integreation'
 config0:
   band_energy: 1
   interaction_strength: 0.1
-  ground_state_degeneracy: 1
+  ground_state_degeneracy: 3
   overlap_optimization: True
   maxiter: 10000000
+  layer_numer: 2
   random_initial_parametrs: False
   loss: 
   # optimizer: 'my_optimizer'

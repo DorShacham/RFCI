@@ -42,7 +42,15 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
         np.save(f'data/Nx-{Nx}_Ny-{Ny}_q={q}_magnetic',IQH_state)
 
     state = IQH_state
-    H_many_body = jax_sparse.BCOO.from_scipy_sparse(sparse.load_npz(f'results/Exact_Diagnolization/Nx-{Nx}_Ny-{Ny}/sparse_matrix.npz'))
+
+    try:
+        H_many_body = jax_sparse.BCOO.from_scipy_sparse(sparse.load_npz(f'results/Exact_Diagnolization/Nx-{Nx}_Ny-{Ny}/sparse_matrix.npz'))
+    except:
+        print("Calculting H_many_body matrix")
+        eigenvalues, eigenvectors = exact_diagnolization(Nx=Nx, Ny=Ny,k=4, multi_process=False, save_result=True,show_result=False)
+        np.savez(f'data/Nx-{Nx}_Ny-{Ny}_k-4.npz', a=eigenvectors)
+        H_many_body = jax_sparse.BCOO.from_scipy_sparse(sparse.load_npz(f'results/Exact_Diagnolization/Nx-{Nx}_Ny-{Ny}/sparse_matrix.npz'))
+    
 
     for i, config_dict in enumerate(config_list):
         config_dict['config_i'] = i
@@ -73,7 +81,7 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
         config_dict['ground_states'] = eigenvectors
 
 
-        ansatz = Jax_ansatz(Nx = Nx, Ny = Ny, n=n)
+        ansatz = Jax_ansatz(Nx = Nx, Ny = Ny, n=n, local_layers_num=config_dict['layer_numer'])
         config_dict['ansatz'] = ansatz
         
         vqe = VQE(config_dict)
