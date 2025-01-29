@@ -12,7 +12,7 @@ from IQH_state import *
 from flux_attch import *
 from jax_vqe import *
 from exact_diagnolization import exact_diagnolization
-
+from jax_ansatz import Jax_ansatz
 
 
 
@@ -73,7 +73,7 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
         config_dict['ground_states'] = eigenvectors
 
 
-        ansatz = Ansatz_class(Nx = Nx, Ny = Ny, IQH_state_mps=mps)
+        ansatz = Jax_ansatz(Nx = Nx, Ny = Ny, n=n)
         config_dict['ansatz'] = ansatz
         
         vqe = VQE(config_dict)
@@ -81,7 +81,7 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
         vqe.plot()
         # calculting initial and final energy
         i_state = state
-        f_state = ansatz.operate(params = res.x, state = state)
+        f_state = ansatz.apply_ansatz(params = res.x, state = state)
 
         initial_energy = my_estimator(i_state,H_many_body)
         finial_energy = my_estimator(f_state,H_many_body)

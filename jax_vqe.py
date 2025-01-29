@@ -2,7 +2,7 @@
 from functools import partial
 import jax
 from jax import jacfwd, jacrev
-import jax.numpy as np
+import jax.numpy as jnp
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 import pickle
@@ -47,7 +47,7 @@ class VQE:
 # with self.ansatz(@params)
     # @jax.jit
     def cost_func(self,params, for_grad = False):
-        state = self.ansatz.operate(params = params, state = self.initial_state)
+        state = self.ansatz.apply_ansatz(params = params, state = self.initial_state)
         energy = my_estimator(state, self.hamiltonian)
         cost = energy
 
@@ -77,21 +77,25 @@ class VQE:
         elif not for_grad:
             print(f"Iters. done: {self.cost_history_dict['iters']} [Current cost: {cost}, energy:{energy}]")
 
-        return self.loss(cost)
+        return (self.loss(cost))
 
     def jacobian(self):
         cost_for_grad = partial(self.cost_func, for_grad = True)
-        return jacfwd(cost_for_grad,(0))
+        # print(type(jacfwd(cost_for_grad,(0))(jnp.zeros(self.ansatz.num_parameters()))))
+        return (jacfwd(cost_for_grad,(0)))
          
 
 # start the optimization proccess. all data on optimization is saved in self.cost_history_dict
     def minimize(self):
         if self.config['random_initial_parametrs']:
             key = jax.random.PRNGKey(0)  # Initialize a random key
-            x0 = np.array(2 * np.pi * jax.random.uniform(key, shape=(self.ansatz.num_parameters(),),dtype=float))
+            x0 = jnp.array(2 * jnp.pi * jax.random.uniform(key, shape=(self.ansatz.num_parameters(),),dtype=float))
         else:
-            # x0 = np.zeros(self.ansatz.num_parameters())
-            x0 = self.ansatz.flux_get_inital_params()
+            # x0 = jnp.zeros(self.ansatz.num_parameters())
+            init_flux_params = self.ansatz.flux_gate.get_inital_params()
+            x0 = jnp.zeros(shape=(self.ansatz.num_parameters(),)).at[:self.ansatz.flux_gate.num_parameters()].set(init_flux_params)
+        
+        # x0 = x0.astype(jnp.float64)
 
 
         if self.config['optimizer'] == 'SPSA':
@@ -149,7 +153,7 @@ class VQE:
 
 
 # Calculate the expection value of @operator on final state from @qc with @initial_state
-# @jax.jit
+@jax.jit
 def my_estimator(state,operator):
     return ((state.T.conjugate() @ (operator @ state)) / (state.T.conjugate() @ state)).real
 
@@ -157,7 +161,7 @@ def my_estimator(state,operator):
 def sbuspace_probability(state_vector, subspace):
     prob = 0
     for v in subspace:
-        prob += np.abs(state_vector.T.conjugate() @ v) ** 2
+        prob += jnp.abs(state_vector.T.conjugate() @ v) ** 2
     return prob
 
 
@@ -165,8 +169,8 @@ def my_optimizer(x, cost_func, eps, step_size, approx_min, log):
     M = 200
     l = 1
     s = 1
-    c = lambda s: np.exp((M - s) / l)
-    loss = lambda x,s: 1 * np.exp(-(c(s)  /  (np.exp( 1e2 * (cost_func(x) - approx_min)) - 1)**2 )**2)
+    c = lambda s: jnp.exp((M - s) / l)
+    loss = lambda x,s: 1 * jnp.exp(-(c(s)  /  (np.exp( 1e2 * (cost_func(x) - approx_min)) - 1)**2 )**2)
     grad_loss = lambda x,s: approx_fprime(x, loss, eps, s)
     tmp_grad  = grad_loss(x,s)
 
@@ -178,7 +182,7 @@ def my_optimizer(x, cost_func, eps, step_size, approx_min, log):
             current_loss = loss(x,s)
         
         grad  = grad_loss(x,s)
-        grad_overlap = np.dot(normalize(tmp_grad),normalize(grad))
+        grad_overlap = jnp.dot(normalize(tmp_grad),normalize(grad))
         if grad_overlap > 0.995 and step_size < 0.01:
             step_size *= 1.05
         if grad_overlap < 0:
@@ -204,8 +208,8 @@ def my_optimizer(x, cost_func, eps, step_size, approx_min, log):
 def my_optimizer_V2(x, cost_func, eps, step_size, approx_min, log):
     M = 4
     s = 1
-    c = lambda s: np.exp((M - s) / 1)
-    loss = lambda x,s: np.exp( - (c(s) / ( (np.exp( 1e1 * (cost_func(x) - approx_min - 1) ) ) - 1)**2)**0.5)
+    c = lambda s: jnp.exp((M - s) / 1)
+    loss = lambda x,s: jnp.exp( - (c(s) / ( (np.exp( 1e1 * (cost_func(x) - approx_min - 1) ) ) - 1)**2)**0.5)
     # loss = lambda x,s: -np.exp( -10 * (cost_func(x) - approx_min - 1))
     grad_loss = lambda x,s: approx_fprime(x, loss, eps, s)
     tmp_grad  = grad_loss(x,s)
@@ -220,12 +224,12 @@ def my_optimizer_V2(x, cost_func, eps, step_size, approx_min, log):
         #     current_loss = loss(x,s)
     
         grad_overlap_counter = 0
-        direction_vector = np.zeros(len(x))
+        direction_vector = jnp.zeros(len(x))
         print("Finding grad")
         while(grad_overlap_counter < 5):
     
             grad  = grad_loss(x,s)
-            grad_overlap = np.dot(normalize(tmp_grad),normalize(grad))
+            grad_overlap = jnp.dot(normalize(tmp_grad),normalize(grad))
             tmp_grad = grad
             x = x - normalize(grad) * grad_step_size
             current_cost, energy, overlap= cost_func(x, return_all=True)
@@ -235,20 +239,20 @@ def my_optimizer_V2(x, cost_func, eps, step_size, approx_min, log):
                 wandb.log(log_dict)
             else:
                 print(log_dict)
-            if np.abs(current_cost - approx_min) < 1e-4:
+            if jnp.abs(current_cost - approx_min) < 1e-4:
                 break
             if grad_overlap > 0.995:
                 grad_overlap_counter += 1
                 direction_vector += grad
             else:
                 grad_overlap_counter = 0
-                direction_vector = np.zeros(len(x))
+                direction_vector = jnp.zeros(len(x))
                 grad_step_size /= 2
                 
         
         direction_vector = normalize(direction_vector)
         # print("Tunning learning rate")
-        # while(current_loss  >= loss(x - direction_vector * step_size,s) and step_size <= 2 * np.pi):
+        # while(current_loss  >= loss(x - direction_vector * step_size,s) and step_size <= 2 * jnp.pi):
         #     step_size *= 2
         #     print(f"Learing rate:{step_size}, curret_loss: {current_loss}, loss: {loss(x - direction_vector * step_size,s)}")
         # while(current_loss * 2 <= loss(x - direction_vector * step_size,s)):
@@ -258,8 +262,8 @@ def my_optimizer_V2(x, cost_func, eps, step_size, approx_min, log):
         
         loss_value_list = []
         cost_value_list = []
-        l_range = np.linspace(start = - 5 * step_size, stop =   5 * step_size, num = int(1e2))
-        # l_range = np.linspace(start = -2 * np.pi, stop =   2 * np.pi, num = int(5e2))
+        l_range = jnp.linspace(start = - 5 * step_size, stop =   5 * step_size, num = int(1e2))
+        # l_range = jnp.linspace(start = -2 * jnp.pi, stop =   2 * jnp.pi, num = int(5e2))
         for l in tqdm(l_range):
             loss_value_list.append(loss(x - direction_vector * l,s))
             cost_value_list.append(cost_func(x - direction_vector * l))
