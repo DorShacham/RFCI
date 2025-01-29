@@ -9,20 +9,20 @@ data:
   p: -1
   q: 3 
 
-resarach_question: 'phase optimization with inital theta guess + SLSQP optimizer with interaction = 1'
+resarach_question: 'test integreation'
 
 config0:
   band_energy: 1
-  interaction_strength: 1
-  ground_state_degeneracy: 
-  overlap_optimization: False
-  maxiter: 1000000
+  interaction_strength: 0.1
+  ground_state_degeneracy: 1
+  overlap_optimization: True
+  maxiter: 10000000
   random_initial_parametrs: False
   loss: 
   # optimizer: 'my_optimizer'
   # optimizer: 'my_optimizer_V2'
   # optimizer: 'SPSA'
-  optimizer: 'SLSQP'
+  # optimizer: 'SLSQP'
   # optimizer: 'cobyla'
-  # optimizer: 'BFGS'
+  optimizer: 'BFGS'
   cktp_iters: 
