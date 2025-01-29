@@ -1,4 +1,4 @@
-
+#%%
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import permutations, combinations
@@ -146,4 +146,4 @@ def exact_diagnolization(Nx, Ny, n = None, H_sb = None, band_energy = 1, interac
 
 
 if __name__ == "__main__":
-    eigenvalues, eigenvectors = exact_diagnolization(Nx=6, Ny=2, multi_process=True, max_workers=10, multiprocess_func=multiprocess_map,from_memory=False,save_result=False,show_result=True)
+    eigenvalues, eigenvectors = exact_diagnolization(Nx=2, Ny=6,k=4, multi_process=False, max_workers=10, multiprocess_func=multiprocess_map,from_memory=False,save_result=True,show_result=False)
