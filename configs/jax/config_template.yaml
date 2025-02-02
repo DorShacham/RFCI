@@ -2,8 +2,8 @@ simulation_type: jax
 
 data:
   name: RFCI
-  Nx: 3
-  Ny: 3
+  Nx: 2
+  Ny: 6
   n: 
   id:
   p: -1
@@ -17,7 +17,7 @@ config0:
   ground_state_degeneracy: 3
   overlap_optimization: True
   maxiter: 10000000
-  layer_numer: 2
+  layer_numer: 4
   random_initial_parametrs: False
   loss: 
   # optimizer: 'my_optimizer'
