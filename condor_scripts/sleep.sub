@@ -1,0 +1,11 @@
+# Unix submit description file
+# sleep.sub -- simple sleep job
+executable = sleep.sh
+log = sleep.log
+output = outfile.txt
+error = errors.txt
+should_transfer_files = No
+request_cpus = 1
+RequestMemory = 50MB
+universe = vanilla
+queue
