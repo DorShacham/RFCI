@@ -1,0 +1,12 @@
+Universe = vanilla
+Executable = condor_scripts/run.sh
+Arguments = --help
+Transfer_Input_Files = qiskit_simulation.py
+Output =  /storage/ph_lindner/dorsh/output.log
+Error =  /storage/ph_lindner/dorsh/error.log
+Log =  /storage/ph_lindner/dorsh/condor.log
+Initaldir = /storage/ph_lindner/dorsh
+Request_Cpus = 1
+Request_Memory = 
+Queue
+
