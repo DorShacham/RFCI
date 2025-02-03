@@ -4,7 +4,7 @@ Arguments =
 
 # Specify file transfer settings
 should_transfer_files = YES
-Transfer_Input_Files = qiskit_simulation.py
+when_to_transfer_output = ON_EXIT
 
 
 Output =  /storage/ph_lindner/dorsh/output.log
