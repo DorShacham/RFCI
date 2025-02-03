@@ -3,7 +3,7 @@
 source /Local/ph_lindner/anaconda3/bin/activate rfci-env
 
 # Run the Python script
-python your_script.py
+python qiskit_simulation.py --help
 
 conda deactivate
 
