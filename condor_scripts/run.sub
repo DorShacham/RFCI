@@ -5,6 +5,7 @@ Arguments =
 # Specify file transfer settings
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
+Transfer_Input_Files = *.py
 
 
 Output =  /storage/ph_lindner/dorsh/output.log
