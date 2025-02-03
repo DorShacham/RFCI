@@ -1,7 +1,13 @@
 Universe = vanilla
 Executable = condor_scripts/run.sh
 Arguments =
+
+# Specify file transfer settings
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
 Transfer_Input_Files = qiskit_simulation.py
+
+
 Output =  /storage/ph_lindner/dorsh/output.log
 Error =  /storage/ph_lindner/dorsh/error.log
 Log =  /storage/ph_lindner/dorsh/condor.log
@@ -9,4 +15,7 @@ Initialdir = /storage/ph_lindner/dorsh
 Request_Cpus = 1
 Request_Memory = 
 Queue
+
+
+
 
