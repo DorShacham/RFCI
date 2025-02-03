@@ -13,7 +13,7 @@ from flux_attch import *
 from jax_vqe import *
 from exact_diagnolization import exact_diagnolization
 from jax_ansatz import Jax_ansatz
-
+from chern_ins_magnetic import add_magnetic_field
 
 
 
