@@ -40,12 +40,11 @@ if __name__ == "__main__":
         # Check the operating system
     if platform.system() == "Linux":
         # Set environment variables to limit CPU usage on Linux
-        os.environ["OMP_NUM_THREADS"] = cpu
-        os.environ["MKL_NUM_THREADS"] = cpu
-        os.environ["NUMEXPR_NUM_THREADS"] = cpu
-        os.environ["OPENBLAS_NUM_THREADS"] = cpu
-        os.environ["VECLIB_MAXIMUM_THREADS"] = cpu
-        os.environ["JAX_NUM_THREADS"] = cpu
+        os.environ["OMP_NUM_THREADS"] = str(cpu)
+        os.environ["MKL_NUM_THREADS"] = str(cpu)
+        os.environ["NUMEXPR_NUM_THREADS"] = str(cpu)
+        os.environ["OPENBLAS_NUM_THREADS"] = str(cpu)
+        os.environ["JAX_NUM_THREADS"] = str(cpu)
         print("CPU usage limited to N threads on Linux.")
     elif platform.system() == "Darwin":
         # macOS-specific behavior (no limitation)

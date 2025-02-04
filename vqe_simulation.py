@@ -11,7 +11,6 @@ if platform.system() == "Linux":
     os.environ["MKL_NUM_THREADS"] = "N"
     os.environ["NUMEXPR_NUM_THREADS"] = "N"
     os.environ["OPENBLAS_NUM_THREADS"] = "N"
-    os.environ["VECLIB_MAXIMUM_THREADS"] = "N"
     os.environ["JAX_NUM_THREADS"] = "N"
     print("CPU usage limited to N threads on Linux.")
 elif platform.system() == "Darwin":
