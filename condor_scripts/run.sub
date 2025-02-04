@@ -11,7 +11,7 @@ Arguments =
 Output =  /storage/ph_lindner/dorsh/output.log
 Error =  /storage/ph_lindner/dorsh/error.log
 Log =  /storage/ph_lindner/dorsh/condor.log
-#Initialdir = /storage/ph_lindner/dorsh
+Initialdir = /storage/ph_lindner/dorsh
 Request_Cpus = 1
 Request_Memory = 50MB
 Queue
