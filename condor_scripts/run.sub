@@ -2,10 +2,9 @@ Universe = vanilla
 Executable = condor_scripts/run.sh
 Arguments =
 
-# Specify file transfer settings
-#should_transfer_files = YES
-#when_to_transfer_output = ON_EXIT
-#Transfer_Input_Files = *.py
+# Specify file transfer settings - the setting should ALWAYS be no!!!!
+#should_transfer_files = NO
+
 
 
 Output =  /storage/ph_lindner/dorsh/output.log
@@ -13,7 +12,8 @@ Error =  /storage/ph_lindner/dorsh/error.log
 Log =  /storage/ph_lindner/dorsh/condor.log
 Initialdir = /storage/ph_lindner/dorsh
 Request_Cpus = 1
-Request_Memory = 
+# if you don't define value for memory the default is 2gb it is advisable to specify a value
+Request_Memory = 1GB
 Queue
 
 
