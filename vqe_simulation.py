@@ -1,8 +1,27 @@
 #%%
 import os
+import platform
 import multiprocessing
 
-os.environ["XLA_FLAGS"] = "--xla_force_host_platform_device_count={}".format(multiprocessing.cpu_count())
+
+# Check the operating system
+if platform.system() == "Linux":
+    # Set environment variables to limit CPU usage on Linux
+    os.environ["OMP_NUM_THREADS"] = "N"
+    os.environ["MKL_NUM_THREADS"] = "N"
+    os.environ["NUMEXPR_NUM_THREADS"] = "N"
+    os.environ["OPENBLAS_NUM_THREADS"] = "N"
+    os.environ["VECLIB_MAXIMUM_THREADS"] = "N"
+    os.environ["JAX_NUM_THREADS"] = "N"
+    print("CPU usage limited to N threads on Linux.")
+elif platform.system() == "Darwin":
+    # macOS-specific behavior (no limitation)
+    print("Running on macOS. No CPU limitation applied.")
+    os.environ["XLA_FLAGS"] = "--xla_force_host_platform_device_count={}".format(multiprocessing.cpu_count())
+else:
+    print("Operating system not recognized. No changes applied.")
+
+
 
 import jax
 
