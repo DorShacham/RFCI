@@ -1,6 +1,7 @@
 Universe = vanilla
 Executable = condor_scripts/run.sh
 Arguments =
+environment = "HOME=/srv01/technion/dorsh"
 
 # Specify file transfer settings
 #should_transfer_files = YES
