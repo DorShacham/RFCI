@@ -14,8 +14,8 @@ resarach_question: 'test integreation'
 config0:
   band_energy: 1
   interaction_strength: 0.1
-  ground_state_degeneracy: 3
-  overlap_optimization: True
+  ground_state_degeneracy: 
+  overlap_optimization: False
   maxiter: 10000000
   layer_numer: 1
   random_initial_parametrs: False
