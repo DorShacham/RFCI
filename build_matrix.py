@@ -45,7 +45,7 @@ if __name__ == "__main__":
         os.environ["NUMEXPR_NUM_THREADS"] = str(cpu)
         os.environ["OPENBLAS_NUM_THREADS"] = str(cpu)
         os.environ["JAX_NUM_THREADS"] = str(cpu)
-        print("CPU usage limited to N threads on Linux.")
+        print(f"CPU usage limited to {cpu} threads on Linux.")
     elif platform.system() == "Darwin":
         # macOS-specific behavior (no limitation)
         print("Running on macOS. No CPU limitation applied.")
