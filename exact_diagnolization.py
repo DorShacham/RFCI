@@ -21,7 +21,7 @@
 # else:
 #     print("Operating system not recognized. No changes applied.")
 
-
+import sys
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -55,15 +55,15 @@ def process_index(index,mps, H_sb, NN, interaction_strength, N, build = "interac
             hopping_terms = True
             interacting_terms = False
 
-        local_data_dict = {}
         state_perm = mps.index_2_perm(index)
-        
+        vector_size = len(mps.zero_vector())
+        sparse_col = sparse.dok_matrix((vector_size,1), dtype=np.complex128)
         # Single-body terms
         if hopping_terms:
             for i in range(N):
                 for j in range(N):
                     if i == j:
-                        local_data_dict[(index, index)] = local_data_dict.get((index, index), 0) + H_sb[i,j]
+                        sparse_col[index,0] += H_sb[i,j]
                     else:
                         if (i in state_perm) or (not (j in state_perm)):
                             continue 
@@ -74,16 +74,14 @@ def process_index(index,mps, H_sb, NN, interaction_strength, N, build = "interac
                             new_perm.insert(0,i)
                             parity, sorted_perm = permutation_parity(tuple(new_perm), return_sorted_array=True)
                             new_index = mps.perm_2_index(sorted_perm)
-                            
-                            local_data_dict[(new_index, index)] = local_data_dict.get((new_index, index), 0) + H_sb[i,j] * (-1)**k * (-1)**parity 
+                            sparse_col[new_index,0] += H_sb[i,j] * (-1)**k * (-1)**parity 
             
         # Interaction terms
         if interacting_terms:
             for i,j in NN:
                 if (i in state_perm) and (j in state_perm):
-                    local_data_dict[(index, index)] = local_data_dict.get((index, index), 0) + interaction_strength
-        
-        return local_data_dict
+                    sparse_col[index,0] += interaction_strength
+        return (sparse_col, index)
     except Exception as e:
         print(f"Error in task: {e}")
         return None
@@ -134,12 +132,13 @@ def exact_diagnolization(Nx, Ny, n = None, H_sb = None, band_energy = 1, interac
         else:
             results = [process_index_partial(index) for index in tqdm(range(len(v)))]
 
-        # Combine results
-        # data_dict = dict(ChainMap(*results))
-        data_dict =  {k: v for d in results for k, v in d.items()}
-        rows, cols = zip(*data_dict.keys())
-        values = list(data_dict.values())
-        sparse_matrix = sparse.csr_matrix((values, (rows, cols)))
+        # Sort by index to ensure correct column order
+        results.sort(key=lambda x: x[1])
+
+        # Extract sorted columns and convert them to CSR format
+        sorted_columns = [col.tocsr() for col, _ in results]
+        # Horizontally stack columns to form the final CSR matrix
+        sparse_matrix = sparse.hstack(sorted_columns, format='csr',dtype=np.complex128)
 
         if save_result:
             os.makedirs(path, exist_ok=True)
@@ -214,12 +213,15 @@ def _build(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase
     else:
         results = [process_index_partial(index) for index in tqdm(range(len(v)))]
 
-    # Combine results
-    # data_dict = dict(ChainMap(*results))
-    data_dict =  {k: v for d in results for k, v in d.items()}
-    rows, cols = zip(*data_dict.keys())
-    values = list(data_dict.values())
-    sparse_matrix = sparse.csr_matrix((values, (rows, cols)))
+    # Sort by index to ensure correct column order
+    results.sort(key=lambda x: x[1])
+
+    # Extract sorted columns and convert them to CSR format
+    sorted_columns = [col.tocsr() for col, _ in results]
+    
+
+    # Horizontally stack columns to form the final CSR matrix
+    sparse_matrix = sparse.hstack(sorted_columns, format='csr')
 
     return sparse_matrix
 
@@ -232,4 +234,5 @@ def build_interaction(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.
 
 
 if __name__ == "__main__":
-    eigenvalues, eigenvectors = exact_diagnolization(Nx=2, Ny=6,k=4, multi_process=False, max_workers=10, multiprocess_func=multiprocess_map,from_memory=False,save_result=True,show_result=False)
+    eigenvalues, eigenvectors = exact_diagnolization(Nx=2, Ny=6,interaction_strength=0.1,k=4, multi_process=True, max_workers=10, multiprocess_func=multiprocess_map,from_memory=False,save_result=False,show_result=True)
+    print(eigenvalues)
