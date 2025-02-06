@@ -1,27 +1,7 @@
 #%%
-# import os
-# import platform
-# import multiprocessing
-
-
-# # Check the operating system
-# if platform.system() == "Linux":
-#     # Set environment variables to limit CPU usage on Linux
-#     os.environ["OMP_NUM_THREADS"] = "N"
-#     os.environ["MKL_NUM_THREADS"] = "N"
-#     os.environ["NUMEXPR_NUM_THREADS"] = "N"
-#     os.environ["OPENBLAS_NUM_THREADS"] = "N"
-#     os.environ["VECLIB_MAXIMUM_THREADS"] = "N"
-#     os.environ["JAX_NUM_THREADS"] = "N"
-#     print("CPU usage limited to N threads on Linux.")
-# elif platform.system() == "Darwin":
-#     # macOS-specific behavior (no limitation)
-#     print("Running on macOS. No CPU limitation applied.")
-#     os.environ["XLA_FLAGS"] = "--xla_force_host_platform_device_count={}".format(multiprocessing.cpu_count())
-# else:
-#     print("Operating system not recognized. No changes applied.")
-
+from memory_profiler import profile
 import sys
+from pympler import asizeof
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -33,6 +13,7 @@ from scipy import sparse
 from scipy.sparse.linalg import eigsh
 import concurrent.futures
 from functools import partial
+from multiprocessing import Manager, shared_memory
 import os
 import gc
 from collections import ChainMap
@@ -43,6 +24,7 @@ from collections import ChainMap
 from IQH_state import *
 from flux_attch import *
 
+# @profile
 def process_index(index,mps, H_sb, NN, interaction_strength, N, build = "interacting H"):
     try:
         if build == "interacting H":
@@ -56,7 +38,7 @@ def process_index(index,mps, H_sb, NN, interaction_strength, N, build = "interac
             interacting_terms = False
 
         state_perm = mps.index_2_perm(index)
-        vector_size = len(mps.zero_vector())
+        vector_size = mps.len
         sparse_col = sparse.dok_matrix((vector_size,1), dtype=np.complex128)
         # Single-body terms
         if hopping_terms:
@@ -81,7 +63,10 @@ def process_index(index,mps, H_sb, NN, interaction_strength, N, build = "interac
             for i,j in NN:
                 if (i in state_perm) and (j in state_perm):
                     sparse_col[index,0] += interaction_strength
-        return (sparse_col, index)
+        
+        # print(f'vec size = {asizeof.asizeof(sparse_col.tocoo(copy=True))}, tuple size = {asizeof.asizeof((sparse_col, index))}')
+        # print((sparse_col.nnz))
+        return (sparse_col.tocoo(), index)
     except Exception as e:
         print(f"Error in task: {e}")
         return None
@@ -104,41 +89,7 @@ def exact_diagnolization(Nx, Ny, n = None, H_sb = None, band_energy = 1, interac
         n = N // 6
     mps = Multi_particle_state(N=N, n=n)
     if not from_memory:
-        # Number of electrons
-        
-        
-        if H_sb is None:
-            H_sb = build_H(Nx=Nx, Ny=Ny, band_energy = band_energy, phi=phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff=element_cutoff)
-
-        NN = []
-        for x in range(Nx):
-            for y in range(Ny):
-                n1 = cite_2_cite_index(x=x, y=y, sublattice=0, Ny=Ny)
-                for delta_x,delta_y in [(0,0), (0,1), (-1,0), (-1,1)]:
-                    n2 = cite_2_cite_index(x=(x + delta_x) % Nx, y=(y + delta_y) % Ny, sublattice=1, Ny=Ny)
-                    NN.append((n1,n2))
-
-        
-        v = mps.zero_vector()
-
-        # Prepare partial function with fixed arguments
-        process_index_partial = partial(process_index, mps=mps, H_sb=H_sb, NN=NN, interaction_strength=interaction_strength, N=N)
-
-        if multi_process:
-            if multiprocess_func is None:
-                multiprocess_func = multiprocess_map
-            chunk_size = min(len(v) // max_workers, int(1e4))
-            results = multiprocess_func(process_index_partial, range(len(v)), max_workers, chunk_size)
-        else:
-            results = [process_index_partial(index) for index in tqdm(range(len(v)))]
-
-        # Sort by index to ensure correct column order
-        results.sort(key=lambda x: x[1])
-
-        # Extract sorted columns and convert them to CSR format
-        sorted_columns = [col.tocsr() for col, _ in results]
-        # Horizontally stack columns to form the final CSR matrix
-        sparse_matrix = sparse.hstack(sorted_columns, format='csr',dtype=np.complex128)
+        sparse_matrix = _build(Nx = Nx, Ny = Ny, n = n, H_sb = H_sb, band_energy= band_energy, phi = phi, phase_shift_x= phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff = element_cutoff, multi_process = multi_process, max_workers = max_workers, multiprocess_func = multiprocess_func)
 
         if save_result:
             os.makedirs(path, exist_ok=True)
@@ -180,6 +131,7 @@ def exact_diagnolization(Nx, Ny, n = None, H_sb = None, band_energy = 1, interac
     return eigenvalues, eigenvectors
 
 # builds many body H or many without interaction or only interaction term with interaction_strength = 1
+# @profile
 def _build(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff = None, multi_process = False, max_workers = 6, multiprocess_func=None, build = "interacting H"):
     N = 2 * Nx * Ny
     if n is None:
@@ -199,29 +151,48 @@ def _build(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase
                 n2 = cite_2_cite_index(x=(x + delta_x) % Nx, y=(y + delta_y) % Ny, sublattice=1, Ny=Ny)
                 NN.append((n1,n2))
 
+    manager = Manager()    
+    NN_shared = manager.list(NN)  # Share NN as a list
     
-    v = mps.zero_vector()
+    H_sb_np = np.array(H_sb)
+    shm = shared_memory.SharedMemory(create=True, size=H_sb_np.nbytes)
+    H_sb_shared = np.ndarray(H_sb_np.shape, dtype=H_sb_np.dtype, buffer=shm.buf)
+    np.copyto(H_sb_shared, H_sb_np)
 
     # Prepare partial function with fixed arguments
-    process_index_partial = partial(process_index, mps=mps, H_sb=H_sb, NN=NN, interaction_strength=1, N=N, build = build)
+    # Prepare partial function with read-only references
+    process_index_partial = partial(
+    process_index,
+    mps=mps,
+    H_sb=H_sb_shared,
+    NN=NN_shared,
+    interaction_strength=1,
+    N=N,
+    build="interacting H"
+)
 
     if multi_process:
         if multiprocess_func is None:
             multiprocess_func = multiprocess_map
-        chunk_size = min(len(v) // max_workers, int(1e4))
-        results = multiprocess_func(process_index_partial, range(len(v)), max_workers, chunk_size)
+        chunk_size = min(mps.len // max_workers, int(1e4))
+        results = multiprocess_func(process_index_partial, range(mps.len), max_workers, chunk_size)
     else:
-        results = [process_index_partial(index) for index in tqdm(range(len(v)))]
+        results = [process_index_partial(index) for index in tqdm(range(mps.len))]
 
+    manager.shutdown()
+    shm.close()
+    shm.unlink()
     # Sort by index to ensure correct column order
     results.sort(key=lambda x: x[1])
 
     # Extract sorted columns and convert them to CSR format
-    sorted_columns = [col.tocsr() for col, _ in results]
+    sorted_columns = [col for col, _ in results]
+
     
 
     # Horizontally stack columns to form the final CSR matrix
-    sparse_matrix = sparse.hstack(sorted_columns, format='csr')
+    sparse_matrix = sparse.hstack(sorted_columns, format='coo')
+    sparse_matrix = sparse_matrix.tocsr()
 
     return sparse_matrix
 
