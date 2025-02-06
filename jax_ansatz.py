@@ -87,7 +87,7 @@ class Jax_TV_ansatz:
         self.Ny = Ny
 
         mps = Multi_particle_state(2 * Nx * Ny, n)
-        state_size = len(mps.zero_vector())
+        state_size = mps.len)
         
         data_list = []
         row_indices_list = []
@@ -215,9 +215,9 @@ class Jax_FA_ansatz:
         mps = IQH_state_mps
         cite_number = 2 * Nx * Ny
         mps_2_particles = Multi_particle_state(N=cite_number,n=2)
-        state_size = len(mps.zero_vector())
+        state_size = mps.len)
         matrix_elements = {}
-        # A = jnp.zeros((len(mps.zero_vector()),len(mps_2_particles.zero_vector())))
+        # A = jnp.zeros((mps.len),len(mps_2_particles.zero_vector())))
         for index in range(state_size):
             state_perm = mps.index_2_perm(index)
             for cite1 in range(1, len(state_perm)):

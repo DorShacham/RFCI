@@ -99,6 +99,7 @@ class Multi_particle_state:
         self.n = n
         self.perm_2_index_dict = perm_2_index_dict
         self.index_2_perm_list = index_2_perm_list
+        self.len = len(self.index_2_perm_list)
         
 # Creats a vectors of zeros in the size of a multi particle state
     def zero_vector(self):
