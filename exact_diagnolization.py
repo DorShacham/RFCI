@@ -1,8 +1,4 @@
 #%%
-from memory_profiler import profile
-import sys
-from pympler import asizeof
-
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import permutations, combinations
@@ -24,7 +20,6 @@ from collections import ChainMap
 from IQH_state import *
 from flux_attch import *
 
-# @profile
 def process_index(index,mps, H_sb, NN, interaction_strength, N, build = "interacting H"):
     try:
         if build == "interacting H":
@@ -64,8 +59,6 @@ def process_index(index,mps, H_sb, NN, interaction_strength, N, build = "interac
                 if (i in state_perm) and (j in state_perm):
                     sparse_col[index,0] += interaction_strength
         
-        # print(f'vec size = {asizeof.asizeof(sparse_col.tocoo(copy=True))}, tuple size = {asizeof.asizeof((sparse_col, index))}')
-        # print((sparse_col.nnz))
         return (sparse_col.tocoo(), index)
     except Exception as e:
         print(f"Error in task: {e}")
@@ -131,7 +124,6 @@ def exact_diagnolization(Nx, Ny, n = None, H_sb = None, band_energy = 1, interac
     return eigenvalues, eigenvectors
 
 # builds many body H or many without interaction or only interaction term with interaction_strength = 1
-# @profile
 def _build(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff = None, multi_process = False, max_workers = 6, multiprocess_func=None, build = "interacting H"):
     N = 2 * Nx * Ny
     if n is None:
