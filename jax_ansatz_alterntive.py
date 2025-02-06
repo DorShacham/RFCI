@@ -158,7 +158,7 @@ from IQH_state import *
 def create_ansatz_matrix(mps, lattice_shape):
     Nx, Ny, _ = lattice_shape
     n_sites = 2 * Nx * Ny
-    state_size = len(mps.zero_vector())
+    state_size = mps.len()
     bonds = [(0,0), (0,1), (-1,0), (-1,1)]
     symbols_list = []
     symbolic_matrix_list = []
@@ -305,7 +305,7 @@ def create_ansatz_matrix(mps, lattice_shape):
     bonds = [(0,0,1), (0,1,1), (-1,0,1), (-1,1,1)]
     Nx, Ny, _ = lattice_shape
     n_sites = 2 * Nx * Ny
-    state_size = len(mps.zero_vector())
+    state_size = mps.len
 
     data_list = []
     row_indices_list = []
