@@ -17,14 +17,12 @@ from collections import ChainMap
 Nx = 2
 Ny = 6
 
-H = sparse.load_npz(str(f'data/matrix/spectral_flow/H_Nx-{Nx}_Ny-{Ny}_4.npz'))
+H = sparse.load_npz(str(f'data/matrix/H_Nx-{Nx}_Ny-{Ny}.npz'))
 interaction = sparse.load_npz(str(f'data/matrix/interactions_Nx-{Nx}_Ny-{Ny}.npz'))
 
 interaction_strength = 0.1
 
 H_new = H + interaction_strength * interaction
-#%%
-print(np.sum(np.abs(H)))
 #%%
 eigenvalues, eigenvectors = eigsh(H_new, k=4, which='SA')
 #%%
