@@ -11,14 +11,19 @@ from exact_diagnolization import *
 if __name__ == "__main__":
     parser = ArgumentParser(description='For a given Nx,Ny,n build the many body H and the interaction matrix interaction_strength = 1')
     parser.add_argument('--save_path', type=str, help='Path to the save location if is missing save at a deafult location')
+    parser.add_argument('--matrix_type', type=str, help='"H" - for non interacting Hamiltonian and "inter" - for interactins')
+    parser.add_argument('--phi', type=float, help='Inserting flux in the y direction')
     parser.add_argument('-Nx', type=int, help='Nx dimension of the lattice')
     parser.add_argument('-Ny', type=int, help='Ny dimension of the lattice')
     parser.add_argument('-n', type=int, help='number of electrons, if missing will taken to be Nx * Ny /3')
     parser.add_argument('-cpu', type=int, help='number of cpus for multiprocess computation, if missing computes without multiprocess')
+
     
     args = parser.parse_args()
     
     save_path = args.save_path
+    matrix_type = args.matrix_type
+    phi_y = args.phi
     Nx = args.Nx
     Ny = args.Ny
     n = args.n
@@ -37,6 +42,19 @@ if __name__ == "__main__":
         multiprocess_func=None
         cpu = 1
 
+    if matrix_type is None:
+        build_H = True
+        build_inter = True
+    elif matrix_type == "H":
+        build_H = True
+        build_inter = False
+    elif matrix_type == "inter":
+        build_H = False
+        build_inter = True
+    else:
+        build_H = False
+        build_inter = False
+
         # Check the operating system
     if platform.system() == "Linux":
         # Set environment variables to limit CPU usage on Linux
@@ -54,14 +72,18 @@ if __name__ == "__main__":
         print("Operating system not recognized. No changes applied.")
 
 
-    print("Building H")
-    non_interacting_H = build_non_interacting_H(Nx, Ny, n=n, multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func)
-    os.makedirs(save_path, exist_ok=True)
-    print("Saving H")
-    sparse.save_npz(save_path + str(f'/H_Nx-{Nx}_Ny-{Ny}.npz'), non_interacting_H)
+    if build_H:
+        if phi_y is None:
+            phi_y = 0
+        print("Building H")
+        non_interacting_H = build_non_interacting_H(Nx, Ny, n=n,phase_shift_y=phi_y, multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func)
+        os.makedirs(save_path, exist_ok=True)
+        print("Saving H")
+        sparse.save_npz(save_path + str(f'/H_Nx-{Nx}_Ny-{Ny}_phiy-{phi_y}.npz'), non_interacting_H)
 
-    print("Building interactions")
-    interaction = build_interaction(Nx, Ny, n=n, multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func)
-    os.makedirs(save_path, exist_ok=True)
-    print("Saving interactions")
-    sparse.save_npz(save_path + str(f'/interactions_Nx-{Nx}_Ny-{Ny}.npz'), interaction)
+    if build_inter:
+        print("Building interactions")
+        interaction = build_interaction(Nx, Ny, n=n, multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func)
+        os.makedirs(save_path, exist_ok=True)
+        print("Saving interactions")
+        sparse.save_npz(save_path + str(f'/interactions_Nx-{Nx}_Ny-{Ny}.npz'), interaction)

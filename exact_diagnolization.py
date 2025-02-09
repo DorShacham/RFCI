@@ -160,7 +160,7 @@ def _build(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase
     NN=NN_shared,
     interaction_strength=1,
     N=N,
-    build="interacting H"
+    build= build
 )
 
     if multi_process:

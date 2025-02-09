@@ -1,18 +1,27 @@
 #%%
+import numpy as np
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+from scipy import sparse
+from scipy.sparse.linalg import eigsh
+
 from IQH_state import *
 from flux_attch import *
-from exact_diagnolization import *
-import numpy as np
 
 Nx = 2
 Ny = 6
 
-for interaction_strength in [1,10,100,1000]:
+H_non_interacting = sparse.load_npz(str(f'data/matrix/H_Nx-{Nx}_Ny-{Ny}.npz'))
+interaction = sparse.load_npz(str(f'data/matrix/interactions_Nx-{Nx}_Ny-{Ny}.npz'))
+
+
+for interaction_strength in tqdm([1,10,100,1000]):
+    H = H_non_interacting + interaction_strength * interaction
     print(f"interaction strength = {interaction_strength}")
     phi_list = np.linspace(start=0,stop=3, num=72 + 1)
     eigenvalues_list = []
     for i, phi in enumerate(phi_list):
-        eigenvalues, eigenvectors = exact_diagnolization(Nx=Nx, Ny=Ny,phase_shift_y=phi * 2 * np.pi, interaction_strength=interaction_strength ,k=7, multi_process=False,multiprocess_func=multiprocess_map, save_result= False, show_result=False)
+        eigenvalues = exact_diagnolization(Nx=Nx, Ny=Ny,phase_shift_y=phi * 2 * np.pi, interaction_strength=interaction_strength ,k=7, multi_process=False,multiprocess_func=multiprocess_map, save_result= False, show_result=False)
         eigenvalues_list.append(eigenvalues)
         print(i)
 
