@@ -189,10 +189,10 @@ def _build(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase
     return sparse_matrix
 
 def build_non_interacting_H(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff = None, multi_process = False, max_workers = 6, multiprocess_func=None):
-    return _build(Nx, Ny, n, H_sb, band_energy, phi, phase_shift_x, phase_shift_y, element_cutoff, multi_process, max_workers, multiprocess_func, build = "non interacting H")
+    return _build(Nx = Nx, Ny = Ny, n = n, H_sb = H_sb, band_energy = band_energy, phi = phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff = element_cutoff, multi_process = multi_process, max_workers = max_workers, multiprocess_func = multiprocess_func, build = "non interacting H")
 
 def build_interaction(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff = None, multi_process = False, max_workers = 6, multiprocess_func=None):
-    return _build(Nx, Ny, n, H_sb, band_energy, phi, phase_shift_x, phase_shift_y, element_cutoff, multi_process, max_workers, multiprocess_func, build = "interaction")
+    return _build(Nx = Nx, Ny = Ny, n = n, H_sb = H_sb, band_energy = band_energy, phi = phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff = element_cutoff, multi_process = multi_process, max_workers = max_workers, multiprocess_func = multiprocess_func, build = "interaction")
 
 
 

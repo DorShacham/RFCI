@@ -80,8 +80,8 @@ if __name__ == "__main__":
         build_inter = True
         build_H = False
         save_path = './data/matrix/spectral_flow'
-        for i in (range(0,72 + 1,3)):
-            non_interacting_H = build_non_interacting_H(Nx, Ny, n=n,phase_shift_y= i * 2 * np.pi, multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func)
+        for i,phi_y in enumerate(np.linspace(0,3,72 + 1)):
+            non_interacting_H = build_non_interacting_H(Nx, Ny, n=n,phase_shift_y= phi_y * 2 * np.pi, multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func)
             os.makedirs(save_path, exist_ok=True)
             print(f"Saving H {i} / 73")
             sparse.save_npz(save_path + str(f'/H_Nx-{Nx}_Ny-{Ny}_{i}.npz'), non_interacting_H)
