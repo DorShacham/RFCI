@@ -1,4 +1,26 @@
 #%%
+import os
+import platform
+import multiprocessing
+
+
+# Check the operating system
+if platform.system() == "Linux":
+    # Set environment variables to limit CPU usage on Linux
+    os.environ["OMP_NUM_THREADS"] = "1"
+    os.environ["MKL_NUM_THREADS"] = "1"
+    os.environ["NUMEXPR_NUM_THREADS"] = "1"
+    os.environ["OPENBLAS_NUM_THREADS"] = "1"
+    os.environ["JAX_NUM_THREADS"] = "1"
+    print("CPU usage limited to 1 threads on Linux.")
+elif platform.system() == "Darwin":
+    # macOS-specific behavior (no limitation)
+    print("Running on macOS. No CPU limitation applied.")
+    os.environ["XLA_FLAGS"] = "--xla_force_host_platform_device_count={}".format(multiprocessing.cpu_count())
+else:
+    print("Operating system not recognized. No changes applied.")
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import permutations, combinations
