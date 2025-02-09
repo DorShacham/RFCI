@@ -14,7 +14,7 @@ import os
 import gc
 from collections import ChainMap
 
-Nx = 2
+Nx = 3
 Ny = 6
 
 H = sparse.load_npz(str(f'data/matrix/H_Nx-{Nx}_Ny-{Ny}.npz'))
