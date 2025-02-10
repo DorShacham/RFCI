@@ -32,14 +32,14 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
         n = Nx * Ny // q
 
     try:
-        IQH_state = np.load(f'data/Nx-{Nx}_Ny-{Ny}_q={q}_magnetic.npy')
+        IQH_state = np.load(f'data/states/Nx-{Nx}_Ny-{Ny}_q={q}_magnetic.npy')
         mps = Multi_particle_state(N = 2 * Nx * Ny,n=n)
     except:
         print("Calculting IQH state")
         H_real_space = build_H(Nx,Ny)
         H_real_space_magnetic = add_magnetic_field(np.array(H_real_space), p, q, Nx, Ny, cites_per_uc = 2)
         IQH_state, mps = create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 1, H_sb = H_real_space_magnetic)
-        np.save(f'data/Nx-{Nx}_Ny-{Ny}_q={q}_magnetic',IQH_state)
+        np.save(f'data/states/Nx-{Nx}_Ny-{Ny}_q={q}_magnetic.npy',IQH_state)
 
     state = IQH_state
 
@@ -48,11 +48,14 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
     except:
         print("Calculting H_many_body matrix")
         eigenvalues, eigenvectors = exact_diagnolization(Nx=Nx, Ny=Ny,k=4, multi_process=False, save_result=True,show_result=False)
-        np.savez(f'data/Nx-{Nx}_Ny-{Ny}_k-4.npz', a=eigenvectors)
+        np.savez(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz', a=eigenvectors)
         H_many_body = jax_sparse.BCOO.from_scipy_sparse(sparse.load_npz(f'results/Exact_Diagnolization/Nx-{Nx}_Ny-{Ny}/sparse_matrix.npz'))
     
 
     for i, config_dict in enumerate(config_list):
+        config_dict['Nx'] = Nx
+        config_dict['Ny'] = Ny
+        config_dict['mps'] = mps
         config_dict['config_i'] = i
         config_dict['log'] = log
         config_dict['hamiltonian'] = H_many_body
@@ -68,12 +71,10 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
         if config_dict['ground_state_degeneracy'] is not None:
             ground_state_degeneracy = config_dict['ground_state_degeneracy']
             try:
-                loaded = np.load(f'data/Nx-{Nx}_Ny-{Ny}_k-4.npz')
+                loaded = np.load(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz')
                 eigenvectors = loaded['a']            
-                eigenvectors = eigenvectors
             except:
                 eigenvalues, eigenvectors = exact_diagnolization(Nx, Ny, band_energy=config_dict['band_energy'], interaction_strength=config_dict['interaction_strength'],k=config_dict['ground_state_degeneracy'],multi_process=False, save_result=False, show_result=False)
-                eigenvectors = eigenvectors
             eigenvectors = eigenvectors[:,:ground_state_degeneracy].T
         else:
             eigenvectors = None

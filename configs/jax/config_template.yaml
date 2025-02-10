@@ -3,19 +3,19 @@ simulation_type: jax
 data:
   name: RFCI
   Nx: 3
-  Ny: 3
+  Ny: 6
   n: 
   id:
   p: -1
   q: 3 
 
-resarach_question: 'test integreation'
+resarach_question: 'run (3,6) with overlap'
 
 config0:
   band_energy: 1
   interaction_strength: 0.1
-  ground_state_degeneracy: 
-  overlap_optimization: False
+  ground_state_degeneracy: 3
+  overlap_optimization: True
   maxiter: 10000000
   layer_numer: 1
   random_initial_parametrs: False
@@ -24,6 +24,6 @@ config0:
   # optimizer: 'my_optimizer_V2'
   # optimizer: 'SPSA'
   # optimizer: 'SLSQP'
-  # optimizer: 'cobyla'
-  optimizer: 'BFGS'
-  cktp_iters: 
+  optimizer: 'cobyla'
+  # optimizer: 'BFGS'
+  cktp_iters: 100

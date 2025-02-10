@@ -10,6 +10,7 @@ import wandb
 # from jax.scipy.optimize import approx_fprime
 from tqdm import tqdm
 
+from IQH_state import *
 
 class Optimizer_reuslt:
     def __init__(self,function_value, x):
@@ -57,7 +58,7 @@ class VQE:
             self.cost_history_dict["cost_history"].append(energy)
 
             if (self.config["cktp_iters"] is not None) and  (self.cost_history_dict["iters"] % self.config["cktp_iters"] == 0) and self.log:
-                print_mp_state(state, self.config['Nx'], self.config['Ny'], saveto=str(self.path) + str(f'/electron_density_{self.cost_history_dict["iters"]}.jpg'))
+                print_mp_state(state, self.config['Nx'], self.config['Ny'], self.config['mps'], saveto=str(self.path) + str(f'/electron_density_{self.cost_history_dict["iters"]}.jpg'))
                 wandb.log({"Electron Density": wandb.Image(str(self.path) + str(f'/electron_density_{self.cost_history_dict["iters"]}.jpg'), caption=f"Config {self.config_i} iter {self.cost_history_dict['iters']}")}, commit = False) 
         
         if self.ground_states is not None:
