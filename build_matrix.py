@@ -14,6 +14,7 @@ if __name__ == "__main__":
     parser.add_argument('--matrix_type', type=str, help='"H" - for non interacting Hamiltonian and "inter" - for interactins')
     parser.add_argument('--sp', action='store_true', help='Calculate H with different phi y for spectal flow')
     parser.add_argument('--phi', type=float, help='Inserting flux in the y direction')
+    parser.add_argument('--name', type=str, help='Add an odditonal string to the file name')
     parser.add_argument('-Nx', type=int, help='Nx dimension of the lattice')
     parser.add_argument('-Ny', type=int, help='Ny dimension of the lattice')
     parser.add_argument('-n', type=int, help='number of electrons, if missing will taken to be Nx * Ny /3')
@@ -93,7 +94,7 @@ if __name__ == "__main__":
             non_interacting_H = build_non_interacting_H(Nx, Ny, n=n,phase_shift_y=phi_y, multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func)
             os.makedirs(save_path, exist_ok=True)
             print("Saving H")
-            sparse.save_npz(save_path + str(f'/H_Nx-{Nx}_Ny-{Ny}_phiy-{phi_y}.npz'), non_interacting_H)
+            sparse.save_npz(save_path + str(f'/H_Nx-{Nx}_Ny-{Ny}_{args.name}.npz'), non_interacting_H)
         else:
             non_interacting_H = build_non_interacting_H(Nx, Ny, n=n, multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func)
             os.makedirs(save_path, exist_ok=True)
