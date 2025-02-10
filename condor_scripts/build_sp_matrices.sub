@@ -8,15 +8,14 @@ should_transfer_files = NO
 
 
 
-Output =  /storage/ph_lindner/dorsh/output/output_$(Process).log
-Error =  /storage/ph_lindner/dorsh/output/error_$(Process).log
-Log =  /storage/ph_lindner/dorsh/output/condor_$(Process).log
+Output =  /storage/ph_lindner/dorsh/RFCI/output/output_$(Process).log
+Error =  /storage/ph_lindner/dorsh/RFCI/output/error_$(Process).log
+Log =  /storage/ph_lindner/dorsh/RFCI/output/condor_$(Process).log
 Initialdir = /storage/ph_lindner/dorsh/RFCI
 Request_Cpus = 1
 # if you don't define value for memory the default is 2gb it is advisable to specify a value
 Request_Memory = 20MB
-# Queue Item in /srv01/technion/dorsh/scripts/RFCI/RFCI/condor_scripts/spectral_flow_phi_values.txt
-Queue
+Queue Item in /srv01/technion/dorsh/scripts/RFCI/RFCI/condor_scripts/spectral_flow_phi_values.txt
 
 
 
