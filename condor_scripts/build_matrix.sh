@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TARGET_FILE="/storage/ph_lindner/dorsh/RFCI/data/matrix/spectral_flow/H_Nx-2_Ny-6_$1.npz"
+TARGET_FILE="/storage/ph_lindner/dorsh/RFCI/data/matrix/spectral_flow/H_Nx-3_Ny-6_$1.npz"
 
 # Check if the file exists
 if [ -f "$TARGET_FILE" ]; then
