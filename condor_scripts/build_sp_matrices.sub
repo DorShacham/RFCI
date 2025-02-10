@@ -15,7 +15,8 @@ Initialdir = /storage/ph_lindner/dorsh/RFCI
 Request_Cpus = 1
 # if you don't define value for memory the default is 2gb it is advisable to specify a value
 Request_Memory = 20MB
-Queue Item in /srv01/technion/dorsh/scripts/RFCI/RFCI/condor_scripts/spectral_flow_phi_values.txt
+# Queue Item in /srv01/technion/dorsh/scripts/RFCI/RFCI/condor_scripts/spectral_flow_phi_values.txt
+Queue
 
 
 
