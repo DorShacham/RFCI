@@ -17,13 +17,13 @@ config0:
   ground_state_degeneracy: 3
   overlap_optimization: True
   maxiter: 10000000
-  layer_numer: 1
+  layer_numer: 3
   random_initial_parametrs: False
   loss: 
   # optimizer: 'my_optimizer'
   # optimizer: 'my_optimizer_V2'
   # optimizer: 'SPSA'
   # optimizer: 'SLSQP'
-  optimizer: 'cobyla'
-  # optimizer: 'BFGS'
+  # optimizer: 'cobyla'
+  optimizer: 'BFGS'
   cktp_iters: 100
