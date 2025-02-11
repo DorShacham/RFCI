@@ -11,7 +11,7 @@ from exact_diagnolization import *
 if __name__ == "__main__":
     parser = ArgumentParser(description='For a given Nx,Ny,n build the many body H and the interaction matrix interaction_strength = 1')
     parser.add_argument('--save_path', type=str, help='Path to the save location if is missing save at a deafult location')
-    parser.add_argument('--matrix_type', type=str, help='"H" - for non interacting Hamiltonian and "inter" - for interactins')
+    parser.add_argument('--matrix_type', type=str, help='"H" - for non interacting Hamiltonian, "inter" - for interactins, "loc" - for local potential')
     parser.add_argument('--sp', action='store_true', help='Calculate H with different phi y for spectal flow')
     parser.add_argument('--phi', type=float, help='Inserting flux in the y direction')
     parser.add_argument('--name', type=str, help='Add an odditonal string to the file name')
@@ -45,18 +45,19 @@ if __name__ == "__main__":
         multiprocess_func=None
         cpu = 1
 
+    build_H = False
+    build_inter = False
+    build_loc = False
+
     if matrix_type is None:
         build_H = True
         build_inter = True
     elif matrix_type == "H":
         build_H = True
-        build_inter = False
     elif matrix_type == "inter":
-        build_H = False
         build_inter = True
-    else:
-        build_H = False
-        build_inter = False
+    elif matrix_type == "loc":
+        build_loc = True
 
     
     
@@ -109,3 +110,10 @@ if __name__ == "__main__":
         os.makedirs(save_path, exist_ok=True)
         print("Saving interactions")
         sparse.save_npz(save_path + str(f'/interactions_Nx-{Nx}_Ny-{Ny}.npz'), interaction)
+
+    if build_loc:
+        print("Building local potential")
+        pot = build_local_potential(Nx, Ny, n=n, multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func)
+        os.makedirs(save_path, exist_ok=True)
+        print("Saving local potential")
+        sparse.save_npz(save_path + str(f'/local_potential_Nx-{Nx}_Ny-{Ny}.npz'), pot)

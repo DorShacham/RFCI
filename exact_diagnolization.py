@@ -22,15 +22,20 @@ from flux_attch import *
 
 def process_index(index,mps, H_sb, NN, interaction_strength, N, build = "interacting H"):
     try:
+        hopping_terms = False
+        interacting_terms = False
+        local_pot = False
+
         if build == "interacting H":
             hopping_terms = True
             interacting_terms = True
         elif build == "interaction":
-            hopping_terms = False
             interacting_terms = True
         elif build == "non interacting H":
             hopping_terms = True
-            interacting_terms = False
+        elif build == "local potential":
+            local_pot = True
+            pot_cite = 0
 
         state_perm = mps.index_2_perm(index)
         vector_size = mps.len
@@ -58,6 +63,11 @@ def process_index(index,mps, H_sb, NN, interaction_strength, N, build = "interac
             for i,j in NN:
                 if (i in state_perm) and (j in state_perm):
                     sparse_col[index,0] += interaction_strength
+
+        # local potential terms
+        if local_pot:
+            if pot_cite in state_perm:
+                sparse_col[index,0] += 1
         
         return (sparse_col.tocoo(), index)
     except Exception as e:
@@ -193,6 +203,9 @@ def build_non_interacting_H(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi 
 
 def build_interaction(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff = None, multi_process = False, max_workers = 6, multiprocess_func=None):
     return _build(Nx = Nx, Ny = Ny, n = n, H_sb = H_sb, band_energy = band_energy, phi = phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff = element_cutoff, multi_process = multi_process, max_workers = max_workers, multiprocess_func = multiprocess_func, build = "interaction")
+
+def build_local_potential(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff = None, multi_process = False, max_workers = 6, multiprocess_func=None):
+    return _build(Nx = Nx, Ny = Ny, n = n, H_sb = H_sb, band_energy = band_energy, phi = phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff = element_cutoff, multi_process = multi_process, max_workers = max_workers, multiprocess_func = multiprocess_func, build = "local potential")
 
 
 
