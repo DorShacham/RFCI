@@ -13,7 +13,7 @@ resarach_question: 'run (3,6) with overlap'
 
 config0:
   band_energy: 1
-  interaction_strength: 0.1
+  interaction_strength: 2
   ground_state_degeneracy: 3
   overlap_optimization: True
   maxiter: 10000000

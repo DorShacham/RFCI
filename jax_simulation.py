@@ -11,7 +11,7 @@ from mpmath import *
 from IQH_state import *
 from flux_attch import *
 from jax_vqe import *
-from exact_diagnolization import exact_diagnolization
+from exact_diagnolization import *
 from jax_ansatz import Jax_ansatz
 from chern_ins_magnetic import add_magnetic_field
 
@@ -44,12 +44,23 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
     state = IQH_state
 
     try:
-        H_many_body = jax_sparse.BCOO.from_scipy_sparse(sparse.load_npz(f'results/Exact_Diagnolization/Nx-{Nx}_Ny-{Ny}/sparse_matrix.npz'))
+        H = sparse.load_npz(str(f'data/matrix/H_Nx-{Nx}_Ny-{Ny}.npz'))
+        interaction = sparse.load_npz(str(f'data/matrix/interactions_Nx-{Nx}_Ny-{Ny}.npz'))
+        H_many_body = jax_sparse.BCOO.from_scipy_sparse(H + config_dict['interaction_strength'] * interaction)
     except:
         print("Calculting H_many_body matrix")
-        eigenvalues, eigenvectors = exact_diagnolization(Nx=Nx, Ny=Ny,k=4, multi_process=False, save_result=True,show_result=False)
+        H = build_non_interacting_H(Nx = Nx, Ny = Ny, n = n, multi_process= False)
+        sparse.save_npz(str(f'data/matrix/H_Nx-{Nx}_Ny-{Ny}.npz'), H)
+
+        interaction = build_interaction(Nx = Nx, Ny = Ny, n = n, multi_process= False)
+        sparse.save_npz(str(f'data/matrix/interactions_Nx-{Nx}_Ny-{Ny}.npz'), interaction)
+        
+        H_many_body = H + config_dict['interaction_strength'] * interaction
+        eigenvalues, eigenvectors = eigenvalues, eigenvectors = eigsh(H_many_body, k=4, which='SA')
         np.savez(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz', a=eigenvectors)
-        H_many_body = jax_sparse.BCOO.from_scipy_sparse(sparse.load_npz(f'results/Exact_Diagnolization/Nx-{Nx}_Ny-{Ny}/sparse_matrix.npz'))
+
+        H_many_body = jax_sparse.BCOO.from_scipy_sparse(H_many_body)
+
     
 
     for i, config_dict in enumerate(config_list):
