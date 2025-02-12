@@ -153,37 +153,49 @@ def _build(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase
                 n2 = cite_2_cite_index(x=(x + delta_x) % Nx, y=(y + delta_y) % Ny, sublattice=1, Ny=Ny)
                 NN.append((n1,n2))
 
-    manager = Manager()    
-    NN_shared = manager.list(NN)  # Share NN as a list
-    
-    H_sb_np = np.array(H_sb)
-    shm = shared_memory.SharedMemory(create=True, size=H_sb_np.nbytes)
-    H_sb_shared = np.ndarray(H_sb_np.shape, dtype=H_sb_np.dtype, buffer=shm.buf)
-    np.copyto(H_sb_shared, H_sb_np)
-
-    # Prepare partial function with fixed arguments
-    # Prepare partial function with read-only references
-    process_index_partial = partial(
-    process_index,
-    mps=mps,
-    H_sb=H_sb_shared,
-    NN=NN_shared,
-    interaction_strength=1,
-    N=N,
-    build= build
-)
 
     if multi_process:
         if multiprocess_func is None:
             multiprocess_func = multiprocess_map
+
+        manager = Manager()    
+        NN_shared = manager.list(NN)  # Share NN as a list
+        H_sb_np = np.array(H_sb)
+        shm = shared_memory.SharedMemory(create=True, size=H_sb_np.nbytes)
+        H_sb_shared = np.ndarray(H_sb_np.shape, dtype=H_sb_np.dtype, buffer=shm.buf)
+        np.copyto(H_sb_shared, H_sb_np)
+
+        # Prepare partial function with fixed arguments
+        # Prepare partial function with read-only references
+        process_index_partial = partial(
+        process_index,
+        mps=mps,
+        H_sb=H_sb_shared,
+        NN=NN_shared,
+        interaction_strength=1,
+        N=N,
+        build= build
+        )
         chunk_size = min(mps.len // max_workers, int(1e4))
         results = multiprocess_func(process_index_partial, range(mps.len), max_workers, chunk_size)
+        
+        manager.shutdown()
+        shm.close()
+        shm.unlink()
+    
     else:
+        process_index_partial = partial(
+        process_index,
+        mps=mps,
+        H_sb=H_sb,
+        NN=NN,
+        interaction_strength=1,
+        N=N,
+        build= build
+        )
         results = [process_index_partial(index) for index in tqdm(range(mps.len))]
 
-    manager.shutdown()
-    shm.close()
-    shm.unlink()
+
     # Sort by index to ensure correct column order
     results.sort(key=lambda x: x[1])
 

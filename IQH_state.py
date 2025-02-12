@@ -195,10 +195,9 @@ class Multi_particle_state:
         return new_state
 
 # Create the single body Hamiltonian in real space
-def build_H(Nx = 2, Ny = 2, band_energy = 1, phi = np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff= None):
+def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff= None):
 # parametrs of the model
     N = Nx * Ny
-    M = 0
     # phi = np.pi/4
     t1 = 1
     t2 = (2-np.sqrt(2))/2
@@ -281,25 +280,26 @@ def create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 
     return extended_state, extended_mps
 
 # project the @state with @mps on @band = +1/-1 of Hamiltonin @H and return the overlap
-def project_on_band(state,band, H, mps):
+def project_on_band(state,band, H, mps, return_k_occupation = False):
     assert(band == 1 or band == -1)
     N = mps.N
     n = mps.n
-    eig_val, eig_vec = np.linalg.eigh(H)    
+    eig_val, eig_vec = np.linalg.eigh(H)   
     if band == -1:
-        print("Calculting the number of electrons in the lower band:")
+        if not return_k_occupation:
+            print("Calculting the number of electrons in the lower band:")
         eig_vec = eig_vec[:,: N // 2]
     elif band == 1:
-        print("Calculting the number of electrons in the upper band:")
+        if not return_k_occupation:
+            print("Calculting the number of electrons in the upper band:")
         eig_vec = eig_vec[:,N // 2:]
 
-    overlap = 0
+    k_occupation = []
     # In this caluclation we calculate sum_k(<state|C_k^dagger C_k |state>) = sum_k( |C_k |state>|^2)
     # Thus first we calculate C_k|state> and then it's norm squared. C_k kills an electron, thus we need a state with minus one electron.
     new_mps = Multi_particle_state(N, n - 1)
     
     for k in range(N // 2):
-        overlap_k = 0
         new_state = new_mps.zero_vector()
         # the state = \Sigma_j=0 ^len(state) \alpha_i C_1_i^dagger...C_N_i^dagger|0>
         for index in range(len(state)):
@@ -316,11 +316,14 @@ def project_on_band(state,band, H, mps):
                     new_index = new_mps.perm_2_index(new_perm)
                     new_state[new_index] += (-1)**l * state[index] * eig_vec[j,k].conjugate()
             
-        overlap_k += np.linalg.norm(new_state)**2
-        overlap += overlap_k
-        # print(f"k:{k} = {overlap_k}")
-        
-    print(f"--------\nThere are {overlap} electrons")
-    return overlap
+    
+        k_occupation.append(np.linalg.norm(new_state)**2)
+    
+    if return_k_occupation:
+        return k_occupation
+    else:
+        band_occupation = np.sum(np.array(k_occupation))
+    print(f"--------\nThere are {band_occupation} electrons")
+    return band_occupation
 
 
