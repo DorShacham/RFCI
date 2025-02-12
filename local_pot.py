@@ -14,13 +14,14 @@ Ny = 6
 path = str(f"./results/local_potential/interaction_shift/Nx-{Nx}_Ny-{Ny}")
 os.makedirs(path, exist_ok=True)
 
-pot_strength_list = np.linspace(0,0.1,num=25+1)
+pot_strength_list = np.linspace(0,0.01,num=25+1)
 
 H_non_interacting = sparse.load_npz(str(f'data/matrix/H_Nx-{Nx}_Ny-{Ny}.npz'))
 interaction = sparse.load_npz(str(f'data/matrix/interactions_Nx-{Nx}_Ny-{Ny}.npz'))
 local_pot = sparse.load_npz(str(f'data/matrix/local_potential_Nx-{Nx}_Ny-{Ny}.npz'))
 
-for interaction_strength in ([1e-1, 1e0, 1e1, 1e2, 1e3]):
+for interaction_strength in ([1e3]):
+# for interaction_strength in ([1e-1, 1e0, 2e0, 1e1, 1e2, 1e3]):
     print(f"interaction strength = {interaction_strength}")
     eigenvalues_list = []
     H = H_non_interacting + interaction_strength * interaction
