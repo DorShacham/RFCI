@@ -54,5 +54,5 @@ eigenvectors = loaded['a']
 
 for i in range(4):
     ev = eigenvectors[:,i].T.conjugate() @ (H_new @ eigenvectors[:,i])
-    print(f'state {i} - norm={np.linalg.norm(eigenvectors[:,i]; <H> = {ev})}')
+    print(f'state {i} - norm={np.linalg.norm(eigenvectors[:,i])}; <H> = {ev}')
 
