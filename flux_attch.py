@@ -40,12 +40,17 @@ def state_2_full_state_vector(state, mps):
 def cite_2_cite_index(x,y,sublattice, Ny):
     return 2 * (Ny * x + y ) + sublattice
 
-# translate the cite @index = 2 * (Ny * x + y) + sublattice -> z = x + iy
-def cite_index_2_z(index,mps, Ny):
+# translate the cite @index = 2 * (Ny * x + y) + sublattice -> (x,y,sublattice)
+def cite_index_2_cite(index, Ny):
     sublattice = index % 2 
     y = (index // 2 ) % Ny
     x = index // (2 * Ny)
-### maybe should use also the subllatice index
+    return (x,y,sublattice)
+
+# translate the cite @index = 2 * (Ny * x + y) + sublattice -> z = x + iy
+def cite_index_2_z(index,mps, Ny):
+    x,y,sublattice = cite_index_2_cite(index,Ny)
+### maybe should use also the sublattice index
 
     z = (x  + 0 * sublattice) + 1j * y
     # z =  y + 1j * (x + 0.2 * sublattice)
