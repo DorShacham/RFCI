@@ -206,7 +206,43 @@ def _apply_FA_ansatz(phase_structure_matrix, params,state):
     return jnp.exp(1j * (phase_structure_matrix @ params)) * state
 
 class Jax_FA_ansatz:
+    # transliation invariant flux attach ansatz matrix
     def __init__(self,Nx,Ny,IQH_state_mps):
+        self.Nx = Nx
+        self.Ny = Ny
+        self.mps = IQH_state_mps
+
+        # building phase addition matrix
+        mps = IQH_state_mps
+        cite_number = 2 * Nx * Ny
+        state_size = IQH_state_mps.len
+        matrix_elements = {}
+        for index in range(state_size):
+            state_perm = mps.index_2_perm(index)
+            for cite1 in range(1, len(state_perm)):
+                for cite2 in range(cite1):
+                    # determine shortest vector
+                    x1,y1,sublattice1 = cite_index_2_cite(state_perm[cite1],Ny)
+                    x2,y2,sublattice2 = cite_index_2_cite(state_perm[cite2],Ny)
+                    dist_ij = np.sqrt(((x1 - x2) % Nx)**2 + ((y1 - y2) % Ny)**2)
+                    dist_ji = np.sqrt(((x2 - x1) % Nx)**2 + ((y2 - y1) % Ny)**2)
+                    if dist_ij <= dist_ji:
+                        col = cite_2_cite_index(x = ((x1 - x2) % Nx), y = ((y1 - y2) % Ny), sublattice = 0, Ny = Ny)
+                        val = 1
+                    else:
+                        col = cite_2_cite_index(x = ((x2 - x1) % Nx), y = ((y2 - y1) % Ny), sublattice = 0, Ny = Ny)
+                        val = -1
+                    matrix_elements[(index, col)] = matrix_elements.get((index, col), 0)  + val
+
+        rows, cols = zip(*matrix_elements.keys())
+        values = list(matrix_elements.values())
+        indices = jnp.column_stack((jnp.array(rows), jnp.array(cols)))
+        sparse_matrix = sparse.BCOO((values,indices),shape = (state_size, cite_number))
+        
+        self.phase_structure_matrix = sparse_matrix
+
+    # original phase structure with an element for each pair of electron - most general
+    def most_general__init__(self,Nx,Ny,IQH_state_mps):
         self.Nx = Nx
         self.Ny = Ny
         self.mps = IQH_state_mps
@@ -303,21 +339,23 @@ class Jax_ansatz:
     def num_parameters(self):
         return (self.flux_gate_param_num + self.local_gate_param_num * 2 * self.local_layers_num)
 
-# #%%
-# import jax.random as random
-# key = random.PRNGKey(0)
+#%%
+import jax.random as random
+key = random.PRNGKey(0)
 
-# Nx = 2
-# Ny = 6
-# n = 4
-# ansatz = Jax_ansatz(Nx,Ny,n)
-# # state = jnp.zeros(ansatz.local_gate.state_size).at[0].set(1)
-# # mps = Multi_particle_state(2 * Nx * Ny, n)
-# state, mps = create_IQH_in_extendend_lattice(Nx,Ny, n)
-# state = jnp.array(state)
-# #%%
-# key = random.PRNGKey(3)
-# random_params = random.uniform(key, shape=(ansatz.num_parameters(),))
+Nx = 2
+Ny = 6
+n = Nx * Ny // 3
+ansatz = Jax_ansatz(Nx,Ny,n)
+# state = jnp.zeros(ansatz.local_gate.state_size).at[0].set(1)
+# mps = Multi_particle_state(2 * Nx * Ny, n)
+state, mps = create_IQH_in_extendend_lattice(Nx,Ny, n)
+state = jnp.array(state)
+#%%
+key = random.PRNGKey(5)
+random_params = random.uniform(key, shape=(ansatz.num_parameters(),))
 # random_params = random_params.at[:ansatz.flux_gate.num_parameters()].set(ansatz.flux_gate.get_inital_params())
-# new_state = ansatz.apply_ansatz(random_params, state)
-# print_mp_state(new_state,Nx,Ny,mps)
+new_state = ansatz.apply_ansatz(random_params,state)
+
+print_mp_state(state,Nx,Ny,mps)
+print_mp_state(new_state,Nx,Ny,mps)
