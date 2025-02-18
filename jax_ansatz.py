@@ -85,67 +85,77 @@ class Jax_TV_ansatz:
         self.params_per_bond = 6
         self.Nx = Nx
         self.Ny = Ny
-
+        
         mps = Multi_particle_state(2 * Nx * Ny, n)
         state_size = mps.len
-        
-        data_list = []
-        row_indices_list = []
-        col_indices_list = []
-
-        for bond in bonds:
-            for x in (range(Nx)):
-                for y in (range(Ny)):
-                    data = []
-                    row_indices = []
-                    col_indices = []
-
-                    cite_index_1 = 2 * (Ny * x + y)
-                    x2 = (x + bond[0]) % Nx
-                    y2 = (y + bond[1]) % Ny
-                    cite_index_2 = 2 * (Ny * x2 + y2) + bond[2]
-
-                    for index in range(state_size):
-                        state_perm = mps.index_2_perm(index)
-                        in_cite1 = cite_index_1 in state_perm
-                        in_cite2 = cite_index_2 in state_perm
-
-                        if not in_cite1 and not in_cite2:
-                            row_indices.append(index)
-                            col_indices.append(index)
-                            data.append([1, 0, 0, 2])  # Placeholder for phase1 = exp(1j * e)
-                        elif in_cite1 and in_cite2:
-                            row_indices.append(index)
-                            col_indices.append(index)
-                            data.append([2, 0, 0, 2])  # Placeholder for phase2 = exp(1j * f)
-                        else:
-                            cite_sum = cite_index_1 + cite_index_2
-                            for j, cite_index in enumerate([cite_index_1, cite_index_2]):
-                                if cite_index in state_perm:
-                                    k = state_perm.index(cite_index)
-                                    new_perm = list(state_perm)
-                                    del new_perm[k]
-                                    new_perm.insert(0, cite_sum - cite_index)
-                                    parity, sorted_perm = permutation_parity(tuple(new_perm), return_sorted_array=True)
-                                    new_index = mps.perm_2_index(sorted_perm)
-
-                                    row_indices.append(index)
-                                    col_indices.append(index)
-                                    data.append([j, j, 0, 0])  # Placeholder for unitary_matrix[j,j]
-
-                                    row_indices.append(new_index)
-                                    col_indices.append(index)
-                                    data.append([1-j, j, k + parity, 1])  # Placeholder for unitary_matrix[1-j,j] * (-1)**(k + parity)
-                    
-                    data_list.append(jnp.array(data, dtype=jnp.int32))
-                    row_indices_list.append(jnp.array(row_indices, dtype=jnp.int32))
-                    col_indices_list.append(jnp.array(col_indices, dtype=jnp.int32))
-
-                        
         self.state_size = state_size
-        self.data_array = jnp.array(data_list)
-        self.row_indices_array = jnp.array(row_indices_list)
-        self.col_indices_array = jnp.array(col_indices_list)
+        
+        try: # trying to load existing matrix
+            loaded = np.load(str(f'data/matrix/ansatz/local_gate_Nx-{Nx}_Ny-{Ny}.npz'))
+            self.data_array = jnp.array(loaded['data_array'])
+            self.row_indices_array = jnp.array(loaded['row_indices_array'])
+            self.col_indices_array = jnp.array(loaded['col_indices_array'])
+        
+        except:
+            # building loacal ansatz gate
+            print("Building local ansatz gate")
+            data_list = []
+            row_indices_list = []
+            col_indices_list = []
+
+            for bond in bonds:
+                for x in (range(Nx)):
+                    for y in (range(Ny)):
+                        data = []
+                        row_indices = []
+                        col_indices = []
+
+                        cite_index_1 = 2 * (Ny * x + y)
+                        x2 = (x + bond[0]) % Nx
+                        y2 = (y + bond[1]) % Ny
+                        cite_index_2 = 2 * (Ny * x2 + y2) + bond[2]
+
+                        for index in range(state_size):
+                            state_perm = mps.index_2_perm(index)
+                            in_cite1 = cite_index_1 in state_perm
+                            in_cite2 = cite_index_2 in state_perm
+
+                            if not in_cite1 and not in_cite2:
+                                row_indices.append(index)
+                                col_indices.append(index)
+                                data.append([1, 0, 0, 2])  # Placeholder for phase1 = exp(1j * e)
+                            elif in_cite1 and in_cite2:
+                                row_indices.append(index)
+                                col_indices.append(index)
+                                data.append([2, 0, 0, 2])  # Placeholder for phase2 = exp(1j * f)
+                            else:
+                                cite_sum = cite_index_1 + cite_index_2
+                                for j, cite_index in enumerate([cite_index_1, cite_index_2]):
+                                    if cite_index in state_perm:
+                                        k = state_perm.index(cite_index)
+                                        new_perm = list(state_perm)
+                                        del new_perm[k]
+                                        new_perm.insert(0, cite_sum - cite_index)
+                                        parity, sorted_perm = permutation_parity(tuple(new_perm), return_sorted_array=True)
+                                        new_index = mps.perm_2_index(sorted_perm)
+
+                                        row_indices.append(index)
+                                        col_indices.append(index)
+                                        data.append([j, j, 0, 0])  # Placeholder for unitary_matrix[j,j]
+
+                                        row_indices.append(new_index)
+                                        col_indices.append(index)
+                                        data.append([1-j, j, k + parity, 1])  # Placeholder for unitary_matrix[1-j,j] * (-1)**(k + parity)
+                        
+                        data_list.append(jnp.array(data, dtype=jnp.int32))
+                        row_indices_list.append(jnp.array(row_indices, dtype=jnp.int32))
+                        col_indices_list.append(jnp.array(col_indices, dtype=jnp.int32))
+                                                    
+                        self.data_array = jnp.array(data_list)
+                        self.row_indices_array = jnp.array(row_indices_list)
+                        self.col_indices_array = jnp.array(col_indices_list)
+
+                        np.savez(str(f'data/matrix/ansatz/local_gate_Nx-{Nx}_Ny-{Ny}.npz'), data_array=self.data_array, row_indices_array=self.row_indices_array, col_indices_array=self.col_indices_array)
 
         
 
@@ -255,7 +265,7 @@ class Jax_FA_ansatz:
             indices = jnp.column_stack((jnp.array(rows), jnp.array(cols)))
             sparse_matrix = sparse.BCOO((values,indices),shape = (state_size, cite_number))
 
-            np.savez(str(f'data/matrix/ansatz/phase_matrix_Nx-{Nx}_Ny-{Ny}.npz'), data=M_sp.data, indices=M_sp.indices, shape=M_sp.shape)
+            np.savez(str(f'data/matrix/ansatz/phase_matrix_Nx-{Nx}_Ny-{Ny}.npz'), data=sparse_matrix.data, indices=sparse_matrix.indices, shape=sparse_matrix.shape)
             
         self.phase_structure_matrix = sparse_matrix
 
