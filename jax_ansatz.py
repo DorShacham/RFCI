@@ -150,7 +150,7 @@ class Jax_TV_ansatz:
         
 
 
-    # appy the ansatz on the @state and return the new_state
+    # apply the ansatz on the @state and return the new_state
     # param_set - the parametrs that parametrize the ansatz. After ordering takes this form
     # ordered_params = [[bond_1_params], [bond_1_params], ..., [bond_2_params], [bond_2_params], ... [bond_4_params]], 
     # where [bond_n_params] = [a,b,c,d,e,f] real numbers
@@ -212,39 +212,51 @@ class Jax_FA_ansatz:
         self.Ny = Ny
         self.mps = IQH_state_mps
 
-        # building phase addition matrix
-        mps = IQH_state_mps
-        cite_number = 2 * Nx * Ny
-        state_size = IQH_state_mps.len
-        matrix_elements = {}
-        for index in range(state_size):
-            state_perm = mps.index_2_perm(index)
-            for cite1 in range(1, len(state_perm)):
-                for cite2 in range(cite1):
-                    # determine shortest vector
-                    x1,y1,sublattice1 = cite_index_2_cite(state_perm[cite1],Ny)
-                    x2,y2,sublattice2 = cite_index_2_cite(state_perm[cite2],Ny)
-                    
-                    dist_1 = np.sqrt(((x1 - x2) % Nx)**2 + ((y1 - y2) % Ny)**2)
-                    dist_2 = np.sqrt((-(x1 - x2) % Nx)**2 + ((y1 - y2) % Ny)**2)
-                    dist_3 = np.sqrt(((x1 - x2) % Nx)**2 + (-(y1 - y2) % Ny)**2)
-                    dist_4 = np.sqrt((-(x1 - x2) % Nx)**2 + (-(y1 - y2) % Ny)**2)
-                    dist_list = [dist_1, dist_2, dist_3, dist_4]
-                    
-                    col_dict = {
-                        0: cite_2_cite_index(x = ((x1 - x2) % Nx), y = ((y1 - y2) % Ny), sublattice = 0, Ny = Ny),
-                        1: cite_2_cite_index(x = (-(x1 - x2) % Nx), y = ((y1 - y2) % Ny), sublattice = 0, Ny = Ny),
-                        2: cite_2_cite_index(x = ((x1 - x2) % Nx), y = (-(y1 - y2) % Ny), sublattice = 0, Ny = Ny),
-                        3: cite_2_cite_index(x = (-(x1 - x2) % Nx), y = (-(y1 - y2) % Ny), sublattice = 0, Ny = Ny)
-                        }
-                    col = col_dict[dist_list.index(min(dist_list))]
-                    matrix_elements[(index, col)] = matrix_elements.get((index, col), 0)  + 1
+        try: # try loading exisiting matrix
+            loaded = np.load(str(f'data/matrix/ansatz/phase_matrix_Nx-{Nx}_Ny-{Ny}.npz'))
+            data = loaded['data']
+            indices = loaded['indices']
+            shape = tuple(loaded['shape'])
 
-        rows, cols = zip(*matrix_elements.keys())
-        values = list(matrix_elements.values())
-        indices = jnp.column_stack((jnp.array(rows), jnp.array(cols)))
-        sparse_matrix = sparse.BCOO((values,indices),shape = (state_size, cite_number))
+            sparse_matrix = sparse.BCOO((data, indices), shape=shape)
         
+        except:
+            # building phase addition matrix
+            print("Building flux attachment ansatz matrix")
+            mps = IQH_state_mps
+            cite_number = 2 * Nx * Ny
+            state_size = IQH_state_mps.len
+            matrix_elements = {}
+            for index in range(state_size):
+                state_perm = mps.index_2_perm(index)
+                for cite1 in range(1, len(state_perm)):
+                    for cite2 in range(cite1):
+                        # determine shortest vector
+                        x1,y1,sublattice1 = cite_index_2_cite(state_perm[cite1],Ny)
+                        x2,y2,sublattice2 = cite_index_2_cite(state_perm[cite2],Ny)
+                        
+                        dist_1 = np.sqrt(((x1 - x2) % Nx)**2 + ((y1 - y2) % Ny)**2)
+                        dist_2 = np.sqrt((-(x1 - x2) % Nx)**2 + ((y1 - y2) % Ny)**2)
+                        dist_3 = np.sqrt(((x1 - x2) % Nx)**2 + (-(y1 - y2) % Ny)**2)
+                        dist_4 = np.sqrt((-(x1 - x2) % Nx)**2 + (-(y1 - y2) % Ny)**2)
+                        dist_list = [dist_1, dist_2, dist_3, dist_4]
+                        
+                        col_dict = {
+                            0: cite_2_cite_index(x = ((x1 - x2) % Nx), y = ((y1 - y2) % Ny), sublattice = 0, Ny = Ny),
+                            1: cite_2_cite_index(x = (-(x1 - x2) % Nx), y = ((y1 - y2) % Ny), sublattice = 0, Ny = Ny),
+                            2: cite_2_cite_index(x = ((x1 - x2) % Nx), y = (-(y1 - y2) % Ny), sublattice = 0, Ny = Ny),
+                            3: cite_2_cite_index(x = (-(x1 - x2) % Nx), y = (-(y1 - y2) % Ny), sublattice = 0, Ny = Ny)
+                            }
+                        col = col_dict[dist_list.index(min(dist_list))]
+                        matrix_elements[(index, col)] = matrix_elements.get((index, col), 0)  + 1
+
+            rows, cols = zip(*matrix_elements.keys())
+            values = list(matrix_elements.values())
+            indices = jnp.column_stack((jnp.array(rows), jnp.array(cols)))
+            sparse_matrix = sparse.BCOO((values,indices),shape = (state_size, cite_number))
+
+            np.savez(str(f'data/matrix/ansatz/phase_matrix_Nx-{Nx}_Ny-{Ny}.npz'), data=M_sp.data, indices=M_sp.indices, shape=M_sp.shape)
+            
         self.phase_structure_matrix = sparse_matrix
 
     # original phase structure with an element for each pair of electron - most general
