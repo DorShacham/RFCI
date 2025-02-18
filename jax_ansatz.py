@@ -224,15 +224,21 @@ class Jax_FA_ansatz:
                     # determine shortest vector
                     x1,y1,sublattice1 = cite_index_2_cite(state_perm[cite1],Ny)
                     x2,y2,sublattice2 = cite_index_2_cite(state_perm[cite2],Ny)
-                    dist_ij = np.sqrt(((x1 - x2) % Nx)**2 + ((y1 - y2) % Ny)**2)
-                    dist_ji = np.sqrt(((x2 - x1) % Nx)**2 + ((y2 - y1) % Ny)**2)
-                    if dist_ij <= dist_ji:
-                        col = cite_2_cite_index(x = ((x1 - x2) % Nx), y = ((y1 - y2) % Ny), sublattice = 0, Ny = Ny)
-                        val = 1
-                    else:
-                        col = cite_2_cite_index(x = ((x2 - x1) % Nx), y = ((y2 - y1) % Ny), sublattice = 0, Ny = Ny)
-                        val = -1
-                    matrix_elements[(index, col)] = matrix_elements.get((index, col), 0)  + val
+                    
+                    dist_1 = np.sqrt(((x1 - x2) % Nx)**2 + ((y1 - y2) % Ny)**2)
+                    dist_2 = np.sqrt((-(x1 - x2) % Nx)**2 + ((y1 - y2) % Ny)**2)
+                    dist_3 = np.sqrt(((x1 - x2) % Nx)**2 + (-(y1 - y2) % Ny)**2)
+                    dist_4 = np.sqrt((-(x1 - x2) % Nx)**2 + (-(y1 - y2) % Ny)**2)
+                    dist_list = [dist_1, dist_2, dist_3, dist_4]
+                    
+                    col_dict = {
+                        0: cite_2_cite_index(x = ((x1 - x2) % Nx), y = ((y1 - y2) % Ny), sublattice = 0, Ny = Ny),
+                        1: cite_2_cite_index(x = (-(x1 - x2) % Nx), y = ((y1 - y2) % Ny), sublattice = 0, Ny = Ny),
+                        2: cite_2_cite_index(x = ((x1 - x2) % Nx), y = (-(y1 - y2) % Ny), sublattice = 0, Ny = Ny),
+                        3: cite_2_cite_index(x = (-(x1 - x2) % Nx), y = (-(y1 - y2) % Ny), sublattice = 0, Ny = Ny)
+                        }
+                    col = col_dict[dist_list.index(min(dist_list))]
+                    matrix_elements[(index, col)] = matrix_elements.get((index, col), 0)  + 1
 
         rows, cols = zip(*matrix_elements.keys())
         values = list(matrix_elements.values())
@@ -273,7 +279,41 @@ class Jax_FA_ansatz:
     def apply_ansatz(self, params,state):
         return _apply_FA_ansatz(self.phase_structure_matrix, params, state)
 
+# for the TA flux ansatx
     def get_inital_params(self):
+        Nx = self.Nx
+        Ny = self.Ny
+        cite_number = 2 * Nx * Ny
+        init_params = np.zeros((cite_number), dtype=jnp.float64)
+
+        for cite in range(cite_number):
+            x,y,sublattice = cite_index_2_cite(cite,Ny)
+            dist_1 = np.sqrt((x % Nx)**2 + (y % Ny)**2)
+            dist_2 = np.sqrt((-x % Nx)**2 + (y % Ny)**2)
+            dist_3 = np.sqrt((x % Nx)**2 + (-y % Ny)**2)
+            dist_4 = np.sqrt((-x % Nx)**2 + (-y % Ny)**2)
+            dist_list = [dist_1, dist_2, dist_3, dist_4]
+            
+            col_dict = {
+                0: cite_2_cite_index(x = (x % Nx), y = (y % Ny), sublattice = 0, Ny = Ny),
+                1: cite_2_cite_index(x = (-x % Nx), y = (y % Ny), sublattice = 0, Ny = Ny),
+                2: cite_2_cite_index(x = (x % Nx), y = (-y % Ny), sublattice = 0, Ny = Ny),
+                3: cite_2_cite_index(x = (-x % Nx), y = (-y % Ny), sublattice = 0, Ny = Ny)
+                }
+            shortest_dist_cite = col_dict[dist_list.index(min(dist_list))]
+
+            za = cite_index_2_z(shortest_dist_cite, self.mps, self.Ny)
+            z = (za) / self.Nx
+            tau = 1j *self.Ny / self.Nx
+            q = complex(np.exp(1j *jnp.pi * tau))
+            term = jnp.array(complex(jtheta(1,z,q)**2))
+            if jnp.abs(term) > 1e-6:
+                init_params[shortest_dist_cite] = float(np.angle(term))
+
+        return init_params
+
+# for the general flux ansatx
+    def general_get_inital_params(self):
         cite_number = 2 * self.Nx * self.Ny
         mps_2_particles = Multi_particle_state(N=cite_number,n=2)
         
@@ -340,22 +380,22 @@ class Jax_ansatz:
         return (self.flux_gate_param_num + self.local_gate_param_num * 2 * self.local_layers_num)
 
 #%%
-import jax.random as random
-key = random.PRNGKey(0)
+# import jax.random as random
+# key = random.PRNGKey(0)
 
-Nx = 2
-Ny = 6
-n = Nx * Ny // 3
-ansatz = Jax_ansatz(Nx,Ny,n)
-# state = jnp.zeros(ansatz.local_gate.state_size).at[0].set(1)
-# mps = Multi_particle_state(2 * Nx * Ny, n)
-state, mps = create_IQH_in_extendend_lattice(Nx,Ny, n)
-state = jnp.array(state)
-#%%
-key = random.PRNGKey(5)
-random_params = random.uniform(key, shape=(ansatz.num_parameters(),))
-# random_params = random_params.at[:ansatz.flux_gate.num_parameters()].set(ansatz.flux_gate.get_inital_params())
-new_state = ansatz.apply_ansatz(random_params,state)
+# Nx = 3
+# Ny = 4
+# n = Nx * Ny // 3
+# ansatz = Jax_ansatz(Nx,Ny,n)
+# # state = jnp.zeros(ansatz.local_gate.state_size).at[0].set(1)
+# # mps = Multi_particle_state(2 * Nx * Ny, n)
+# state, mps = create_IQH_in_extendend_lattice(Nx,Ny, n)
+# state = jnp.array(state)
+# #%%
+# key = random.PRNGKey(9)
+# random_params = random.uniform(key, shape=(ansatz.num_parameters(),))
+# # random_params = random_params.at[:ansatz.flux_gate.num_parameters()].set(ansatz.flux_gate.get_inital_params())
+# new_state = ansatz.apply_ansatz(random_params,state)
 
-print_mp_state(state,Nx,Ny,mps)
-print_mp_state(new_state,Nx,Ny,mps)
+# print_mp_state(state,Nx,Ny,mps)
+# print_mp_state(new_state,Nx,Ny,mps)
