@@ -136,7 +136,6 @@ class Multi_particle_state:
             multi_particle_state_index = self.perm_2_index(soreted_perm)
             multi_particle_state_vector[multi_particle_state_index] += state_coeff
 
-
         return normalize(multi_particle_state_vector)
 
 # Function that acts as a (non-interacting) many body Hamiltonian bases on a single body Hamiltonian @H_sb on state @multi_particle_state
@@ -153,8 +152,9 @@ class Multi_particle_state:
             #signle_body_states is the indices of the sites where the electrons seats.
             for i in range(N):
                 for j in range(M):
-                    if (i == j):
-                        new_state[index] += H_sb[i,j] * multi_particle_state[index] 
+                    if (i == j) and (i in state_perm):
+                        new_state[index] += H_sb[i,j] * multi_particle_state[index]
+
                     else:
                         # Ci_dagger * Ci_dagger = C_j |0> = 0 
                         if (i in state_perm) or (not (j in state_perm)):
@@ -222,7 +222,7 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x
         for ky in Ky:
             H_single_particle = build_h2(kx - phase_shift_x/Nx,ky - phase_shift_y/Ny, band_energy)
             eig_val, eig_vec = np.linalg.eigh(H_single_particle)
-            h_flat = H_single_particle / np.abs(eig_val[0]) * band_energy + i * 1e-8  # flat band limit
+            h_flat = H_single_particle / np.abs(eig_val[0]) * band_energy + i * 1e-8  # flat band limit + small disperssion for numerical stabilty
             H_k_list.append(h_flat)
             i += 1
             
@@ -232,7 +232,8 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x
 
     # dft matrix as a tensor protuct of dft in x and y axis and idenity in the sublattice
     dft_matrix = np.kron(dft(Nx),(np.kron(dft(Ny),np.eye(2)))) / np.sqrt(N)
-    H_real_space =np.matmul(np.matmul(dft_matrix.T.conjugate(),H_k), dft_matrix)
+    dft_inverse_matrix = np.kron(dft(Nx).T.conjugate(),(np.kron(dft(Ny).T.conjugate(),np.eye(2)))) / np.sqrt(N)
+    H_real_space = dft_inverse_matrix @ H_k @ dft_matrix
     
     if element_cutoff is not None:
         H_real_space[np.abs(H_real_space) < element_cutoff] = 0

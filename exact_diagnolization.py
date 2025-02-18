@@ -44,7 +44,7 @@ def process_index(index,mps, H_sb, NN, interaction_strength, N, build = "interac
         if hopping_terms:
             for i in range(N):
                 for j in range(N):
-                    if i == j:
+                    if (i == j) and (i in state_perm):
                         sparse_col[index,0] += H_sb[i,j]
                     else:
                         if (i in state_perm) or (not (j in state_perm)):
