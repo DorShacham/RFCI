@@ -212,7 +212,7 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x
 
     def build_h2(kx, ky, band_energy):
         h11 = 2 * t2 * (np.cos(kx) - np.cos(ky)) + M
-        h12 = t1 * np.exp(1j * phi) * (1 + np.exp(1j * (ky - kx))) + t1 * t1 * np.exp(-1j * phi) * (np.exp(1j * (ky)) + np.exp(1j * (- kx)))
+        h12 = t1 * np.exp(1j * phi) * (1 + np.exp(1j * (ky - kx))) + t1 * np.exp(-1j * phi) * (np.exp(1j * (ky)) + np.exp(1j * (- kx)))
         h2 = np.matrix([[h11, h12], [np.conjugate(h12), -h11]])
         return h2
 
