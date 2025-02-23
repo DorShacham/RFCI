@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
 
     print('Loading matrix')
-    H = sparse.load_npz(str(f'data/matrix/H_Nx-{Nx}_Ny-{Ny}_{matrix_index}.npz'))
+    H = sparse.load_npz(str(f'data/matrix/pectral_flow/H_Nx-{Nx}_Ny-{Ny}_{matrix_index}.npz'))
     interaction = sparse.load_npz(str(f'data/matrix/interactions_Nx-{Nx}_Ny-{Ny}.npz'))
 
     band_energy = 1
