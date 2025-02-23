@@ -374,3 +374,19 @@ def cite_index_2_z(index,mps, Ny):
     z = (x  + 0 * sublattice) + 1j * y
     # z =  y + 1j * (x + 0.2 * sublattice)
     return z
+
+# Implimintation of the translation operator for @state with @mps on lattice (@Nx,@Ny) in the (@Tx,@Ty) direction
+def translation_operator(state, mps, Nx, Ny, Tx = 0, Ty = 0):
+    new_state = mps.zero_vector()
+    for index in tqdm(range(mps.len)):
+        state_perm = mps.index_2_perm(index)
+        new_perm = []
+        for cite_index in state_perm:
+            x,y, sublatice = cite_index_2_cite(cite_index,Ny)
+            new_cite_index = cite_2_cite_index((x + Tx) % Nx, (y + Ty) % Ny , sublatice, Ny)
+            new_perm.append(new_cite_index)
+        parity, sorted_perm = permutation_parity(tuple(new_perm), return_sorted_array=True)
+        new_index = mps.perm_2_index(sorted_perm)
+        new_state[new_index] = (-1) ** parity * state[index]
+    return new_state
+
