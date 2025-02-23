@@ -152,6 +152,7 @@ class VQE:
         plt.draw()
         if self.path is not None:
             plt.savefig(str(self.path) + str('/optimzation_plot.jpg'))
+        plt.close()
 
 
 # Calculate the expection value of @operator on final state from @qc with @initial_state
