@@ -42,7 +42,7 @@ if __name__ == "__main__":
     from exact_diagnolization import *
     from IQH_state import *
 
-    phi_list = np.array(range(0,72 + 1, step)) / 72 * 3
+    phi_list = np.array(range(0,72 + 1)) / 72 * 3
 
     eigenvalues_list = []
     for i in tqdm(range(0,72 + 1)):
