@@ -42,11 +42,10 @@ if __name__ == "__main__":
     from exact_diagnolization import *
     from IQH_state import *
 
-    step = 1
     phi_list = np.array(range(0,72 + 1, step)) / 72 * 3
 
     eigenvalues_list = []
-    for i in tqdm(range(0,72 + 1, step = 1)):
+    for i in tqdm(range(0,72 + 1)):
         loaded = np.load(f'data/states/spectral_flow/Nx-{Nx}_Ny-{Ny}_{i}.npz')
         eigenvalues = loaded['eigenvalues']  
         eigenvalues_list.append(np.sort(eigenvalues))
