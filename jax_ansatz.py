@@ -369,12 +369,18 @@ class Jax_FA_ansatz:
 # made of U_ansatz = U_local_after @ U_flux @ U_local_before
 
 class Jax_ansatz:
-    def __init__(self,Nx,Ny,n, local_layers_num = 1):
+    def __init__(self,Nx,Ny,n, local_layers_num = 1, flux_gate_true = True):
         IQH_state_mps =  Multi_particle_state(2 * Nx * Ny, n)
-        self.flux_gate = Jax_FA_ansatz(Nx = Nx, Ny = Ny, IQH_state_mps = IQH_state_mps)
-        self.local_gate = Jax_TV_ansatz(Nx = Nx, Ny = Ny, n = n)
+        self.flux_gate_true = flux_gate_true
+        
+        if flux_gate_true:
+            self.flux_gate = Jax_FA_ansatz(Nx = Nx, Ny = Ny, IQH_state_mps = IQH_state_mps)
+            self.flux_gate_param_num = self.flux_gate.num_parameters()
+        else:
+            self.flux_gate = None
+            self.flux_gate_param_num = 0
 
-        self.flux_gate_param_num = self.flux_gate.num_parameters()
+        self.local_gate = Jax_TV_ansatz(Nx = Nx, Ny = Ny, n = n)
         self.local_gate_param_num = self.local_gate.num_parameters()
         self.local_layers_num = local_layers_num
     
@@ -393,7 +399,10 @@ class Jax_ansatz:
         state= jnp.array(state)
         for before_params in local_before:
             state = self.local_gate.apply_ansatz(param_set=jnp.array(before_params), state= state)
-        state = self.flux_gate.apply_ansatz(params=jnp.array(flux_params), state=state)
+
+        if self.flux_gate_true:
+            state = self.flux_gate.apply_ansatz(params=jnp.array(flux_params), state=state)
+            
         for after_params in local_after:
             state = self.local_gate.apply_ansatz(param_set=jnp.array(after_params), state= state)
         return state

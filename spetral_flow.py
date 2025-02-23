@@ -8,8 +8,8 @@ from scipy.sparse.linalg import eigsh
 from IQH_state import *
 from flux_attch import *
 
-Nx = 2
-Ny = 6
+Nx = 3
+Ny = 5
 step = 1
 phi_list = np.array(range(0,72 + 1, step)) / 72 * 3
 
@@ -17,7 +17,8 @@ interaction = sparse.load_npz(str(f'data/matrix/interactions_Nx-{Nx}_Ny-{Ny}.npz
 
 
 # for interaction_strength in tqdm([1e-1, 2e-1, 3e-1, 4e-1, 5e-1, 6e-1, 7e-1, 8e-1 ,9e-1 ,1,1,10,100,1000]):
-for interaction_strength in tqdm(np.arange(1.025,2.025,0.025)):
+# for interaction_strength in tqdm(np.arange(1.025,2.025,0.025)):
+for interaction_strength in tqdm([2]):
     print(f"interaction strength = {interaction_strength}")
     eigenvalues_list = []
     for i in (range(0,72 + 1, step)):
