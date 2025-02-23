@@ -1,21 +1,14 @@
-import os
-import platform
-import multiprocessing
-from argparse import ArgumentParser
-
 if __name__ == "__main__":
     parser = ArgumentParser(description='For a given Nx,Ny load the matrix if exisit and diagnolizing it')
     parser.add_argument('-Nx', type=int, help='Nx dimension of the lattice')
     parser.add_argument('-Ny', type=int, help='Ny dimension of the lattice')
     parser.add_argument('-cpu', type=int, help='number of cpus for multiprocess computation, if missing computes without multiprocess')
-    parser.add_argument('--matrix_index', type=int, help='Index of the matrix in the specral flow matrices')
 
     args = parser.parse_args()
     Nx = args.Nx
     Ny = args.Ny
     n = Nx * Ny // 3
     cpu = args.cpu
-    matrix_index = args.matrix_index
 
         # Check the operating system
     if platform.system() == "Linux":
@@ -44,15 +37,35 @@ if __name__ == "__main__":
     from exact_diagnolization import *
     from IQH_state import *
 
+    step = 1
+    phi_list = np.array(range(0,72 + 1, step)) / 72 * 3
 
-    print('Loading matrix')
-    H = sparse.load_npz(str(f'data/matrix/spectral_flow/H_Nx-{Nx}_Ny-{Ny}_{matrix_index}.npz'))
-    interaction = sparse.load_npz(str(f'data/matrix/interactions_Nx-{Nx}_Ny-{Ny}.npz'))
+    eigenvalues_list = []
+    for i in tqdm(range(0,72 + 1, step = 1)):
+        loaded = np.load(f'data/states/spectral_flow/Nx-{Nx}_Ny-{Ny}_{i}.npz')
+        eigenvalues = loaded['eigenvalues']  
+        eigenvalues_list.append(np.sort(eigenvalues))
 
-    band_energy = 1
-    interaction_strength = 2
-    H = band_energy * (H + n * sparse.identity(n = np.shape(H)[0], format='csr'))  + interaction_strength * interaction
-    #%%
-    print('Diaganolizing')
-    eigenvalues, eigenvectors = eigsh(H, k=7, which='SA')
-    np.savez(f'data/states/spectral_flow/Nx-{Nx}_Ny-{Ny}_{matrix_index}.npz', a=eigenvectors, eigenvalues = eigenvalues)
+    eigenvalues_list = np.array(eigenvalues_list) 
+    plt.figure()
+    plt.plot(phi_list,eigenvalues_list[:,0], "-.")
+    plt.plot(phi_list,eigenvalues_list[:,1], "-.")
+    plt.plot(phi_list,eigenvalues_list[:,2], "-.")
+    plt.plot(phi_list,eigenvalues_list[:,3], "-.")
+    plt.plot(phi_list,eigenvalues_list[:,4], "-.")
+    plt.plot(phi_list,eigenvalues_list[:,5], "-.")
+    plt.plot(phi_list,eigenvalues_list[:,6], "-.")
+    plt.grid()
+    
+    plt.title(f"Spectral flow with interaction strentgh\n of {interaction_strength} for ({Nx,Ny}) lattice \n(first 7 eigenvalues shifted by the lowest value)")
+    plt.savefig(f"./results/spectral_flow/interaction_shift/Nx-{Nx}_Ny-{Ny}/interaction-{interaction_strength}_k=7.jpg")
+
+
+    plt.figure()
+    plt.plot(phi_list,eigenvalues_list[:,0], "-.")
+    plt.plot(phi_list,eigenvalues_list[:,1], "-.")
+    plt.plot(phi_list,eigenvalues_list[:,2], "-.")
+    plt.grid()
+
+    plt.title(f"Spectral flow with interaction strentgh\n of {interaction_strength} for ({Nx,Ny}) lattice \n(first 3 eigenvalues shifted by the lowest value)")
+    plt.savefig(f"./results/spectral_flow/interaction_shift/Nx-{Nx}_Ny-{Ny}/interaction-{interaction_strength}_k=3.jpg")
