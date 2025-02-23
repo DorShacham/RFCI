@@ -55,4 +55,4 @@ if __name__ == "__main__":
     #%%
     print('Diaganolizing')
     eigenvalues, eigenvectors = eigsh(H, k=4, which='SA')
-    np.savez(f'data/states/spectral_flow/Nx-{Nx}_Ny-{Ny}_k-4.npz', a=eigenvectors, eigenvalues = eigenvalues)
+    np.savez(f'data/states/spectral_flow/Nx-{Nx}_Ny-{Ny}_{matrix_index}.npz', a=eigenvectors, eigenvalues = eigenvalues)
