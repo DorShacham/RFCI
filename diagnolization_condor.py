@@ -1,12 +1,7 @@
 import os
 import platform
 import multiprocessing
-
-
-
-
-
-
+from argparse import ArgumentParser
 
 if __name__ == "__main__":
     parser = ArgumentParser(description='For a given Nx,Ny load the matrix if exisit and diagnolizing it')
