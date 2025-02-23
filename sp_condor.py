@@ -57,8 +57,8 @@ if __name__ == "__main__":
     plt.plot(phi_list,eigenvalues_list[:,6], "-.")
     plt.grid()
     
-    plt.title(f"Spectral flow with interaction strentgh\n of {interaction_strength} for ({Nx,Ny}) lattice \n(first 7 eigenvalues shifted by the lowest value)")
-    plt.savefig(f"./results/spectral_flow/interaction_shift/Nx-{Nx}_Ny-{Ny}/interaction-{interaction_strength}_k=7.jpg")
+    plt.title(f"Spectral flow for ({Nx,Ny}) lattice \n(first 7 eigenvalues)")
+    plt.savefig(f"./results/spectral_flow/Nx-{Nx}_Ny-{Ny}_k=7.jpg")
 
 
     plt.figure()
@@ -67,5 +67,5 @@ if __name__ == "__main__":
     plt.plot(phi_list,eigenvalues_list[:,2], "-.")
     plt.grid()
 
-    plt.title(f"Spectral flow with interaction strentgh\n of {interaction_strength} for ({Nx,Ny}) lattice \n(first 3 eigenvalues shifted by the lowest value)")
-    plt.savefig(f"./results/spectral_flow/interaction_shift/Nx-{Nx}_Ny-{Ny}/interaction-{interaction_strength}_k=3.jpg")
+    plt.title(f"Spectral flow for ({Nx,Ny}) lattice \n(first 3 eigenvalues)")
+    plt.savefig(f"./results/spectral_flow//Nx-{Nx}_Ny-{Ny}_k=3.jpg")
