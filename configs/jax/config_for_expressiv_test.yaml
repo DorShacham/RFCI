@@ -3,7 +3,7 @@ simulation_type: jax
 data:
   name: RFCI
   Nx: 2
-  Ny: 6
+  Ny: 3
   n: 
   id:
   p: -1
