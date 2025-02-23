@@ -2,14 +2,14 @@ simulation_type: jax
 
 data:
   name: RFCI
-  Nx: 2
-  Ny: 6
+  Nx: 3
+  Ny: 3
   n: 
   id:
   p: -1
   q: 3 
 
-resarach_question: 'run (2,6) with overlap but energy opti'
+resarach_question: 'temp testing'
 
 config0:
   band_energy: 1
@@ -17,7 +17,7 @@ config0:
   ground_state_degeneracy: 3
   overlap_optimization: True
   maxiter: 10000000
-  layer_numer: 3
+  layer_numer: 
   flux_gate_true: True
   random_initial_parametrs: False
   loss: 
@@ -27,4 +27,4 @@ config0:
   # optimizer: 'SLSQP'
   # optimizer: 'cobyla'
   optimizer: 'BFGS'
-  cktp_iters: 200
+  cktp_iters: 
