@@ -3,7 +3,7 @@ simulation_type: jax
 data:
   name: RFCI
   Nx: 2
-  Ny: 3
+  Ny: 6
   n: 
   id:
   p: -1
@@ -19,7 +19,7 @@ config0:
   maxiter: 10000000
   layer_numer: 
   flux_gate_true: True
-  random_initial_parametrs: False
+  random_initial_parametrs: True
   loss: 
   # optimizer: 'my_optimizer'
   # optimizer: 'my_optimizer_V2'
