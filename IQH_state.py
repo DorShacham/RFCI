@@ -221,7 +221,7 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x
     i = 0
     for kx in Kx:
         for ky in Ky:
-            H_single_particle = build_h2(kx - phase_shift_x/Nx,ky - phase_shift_y/Ny, band_energy)
+            H_single_particle = build_h2(kx + phase_shift_x/Nx,ky + phase_shift_y/Ny, band_energy)
             eig_val, eig_vec = np.linalg.eigh(H_single_particle)
             h_flat = H_single_particle / np.abs(eig_val[0]) * band_energy + i * 1e-8  # flat band limit + small disperssion for numerical stabilty
             H_k_list.append(h_flat)
