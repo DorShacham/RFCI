@@ -49,7 +49,7 @@ if __name__ == "__main__":
     H = sparse.load_npz(str(f'data/matrix/spectral_flow/H_Nx-{Nx}_Ny-{Ny}_{matrix_index}.npz'))
     interaction = sparse.load_npz(str(f'data/matrix/interactions_Nx-{Nx}_Ny-{Ny}.npz'))
 
-    band_energy = 1e3
+    band_energy = 1
     interaction_strength = 2
     H = band_energy * (H + n * sparse.identity(n = np.shape(H)[0], format='csr'))  + interaction_strength * interaction
     #%%
