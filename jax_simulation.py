@@ -42,6 +42,7 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
         np.save(f'data/states/Nx-{Nx}_Ny-{Ny}_q={q}_magnetic.npy',IQH_state)
 
     state = IQH_state
+    state = normalize(state + translation_operator(state,mps,Nx,Ny,Tx=0,Ty=1))
 
     try:
         H = sparse.load_npz(str(f'data/matrix/H_Nx-{Nx}_Ny-{Ny}.npz'))
