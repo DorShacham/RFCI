@@ -90,13 +90,13 @@ class VQE:
     def minimize(self):
         if self.config['random_initial_parametrs']:
             key = jax.random.PRNGKey(0)  # Initialize a random key
-            init_flux_params = self.ansatz.flux_gate.get_inital_params()
-            x0 = jnp.array(2 * jnp.pi * jax.random.uniform(key, shape=(self.ansatz.num_parameters(),),dtype=float)).at[:self.ansatz.flux_gate.num_parameters()].set(init_flux_params)
-        elif self.config['flux_gate_true']:
-            init_flux_params = self.ansatz.flux_gate.get_inital_params()
-            x0 = jnp.zeros(shape=(self.ansatz.num_parameters(),)).at[:self.ansatz.flux_gate.num_parameters()].set(init_flux_params)
+            x0 = jnp.array(2 * jnp.pi * jax.random.uniform(key, shape=(self.ansatz.num_parameters(),),dtype=float))
         else:
             x0 = jnp.zeros(shape=(self.ansatz.num_parameters(),))
+
+        if self.config['flux_gate_true']:
+            init_flux_params = self.ansatz.flux_gate.get_inital_params()
+            x0 = x0.at[:self.ansatz.flux_gate.num_parameters()].set(init_flux_params)
         
         # x0 = x0.astype(jnp.float64)
 
