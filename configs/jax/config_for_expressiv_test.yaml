@@ -24,7 +24,7 @@ config0:
   # optimizer: 'my_optimizer'
   # optimizer: 'my_optimizer_V2'
   # optimizer: 'SPSA'
-  # optimizer: 'SLSQP'
+  optimizer: 'SLSQP'
   # optimizer: 'cobyla'
-  optimizer: 'BFGS'
+  # optimizer: 'BFGS'
   cktp_iters: 
