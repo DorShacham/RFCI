@@ -379,7 +379,7 @@ def cite_index_2_z(index,mps, Ny):
 # Implimintation of the translation operator for @state with @mps on lattice (@Nx,@Ny) in the (@Tx,@Ty) direction
 def translation_operator(state, mps, Nx, Ny, Tx = 0, Ty = 0):
     new_state = mps.zero_vector()
-    for index in tqdm(range(mps.len)):
+    for index in (range(mps.len)):
         state_perm = mps.index_2_perm(index)
         new_perm = []
         for cite_index in state_perm:
