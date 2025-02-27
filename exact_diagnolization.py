@@ -149,7 +149,7 @@ def _build(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase
     for x in range(Nx):
         for y in range(Ny):
             n1 = cite_2_cite_index(x=x, y=y, sublattice=0, Ny=Ny)
-            for delta_x,delta_y in [(0,0), (0,1), (-1,0), (-1,1)]:
+            for delta_x,delta_y in [(0,0), (0,-1), (1,0), (1,-1)]:
                 n2 = cite_2_cite_index(x=(x + delta_x) % Nx, y=(y + delta_y) % Ny, sublattice=1, Ny=Ny)
                 NN.append((n1,n2))
 
@@ -222,5 +222,5 @@ def build_local_potential(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi = 
 
 
 if __name__ == "__main__":
-    eigenvalues, eigenvectors = exact_diagnolization(Nx=2, Ny=6,interaction_strength=0.1,k=4, multi_process=True, max_workers=10, multiprocess_func=multiprocess_map,from_memory=False,save_result=False,show_result=True)
+    eigenvalues, eigenvectors = exact_diagnolization(Nx=6, Ny=3,interaction_strength=1,k=5, multi_process=True, max_workers=6, multiprocess_func=multiprocess_map,from_memory=False,save_result=True,show_result=False)
     print(eigenvalues)

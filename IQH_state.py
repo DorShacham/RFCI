@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from itertools import permutations, combinations
 from scipy.linalg import block_diag,dft,expm
+import scipy
 from tqdm import tqdm
 
 from qiskit.quantum_info import SparsePauliOp
@@ -208,6 +209,8 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x
     # Starting the BZ from zero to 2pi since this is how the DFT matrix is built
     Kx = np.linspace(0, 2 * np.pi,num=Nx,endpoint=False)
     Ky = np.linspace(0, 2 * np.pi,num=Ny,endpoint=False)
+    # Kx = np.linspace(-np.pi, np.pi,num=Nx,endpoint=False)
+    # Ky = np.linspace(-np.pi, np.pi,num=Ny,endpoint=False)
     X = np.array(range(Nx)) 
     Y = np.array(range(Ny)) 
 
@@ -225,6 +228,7 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x
             eig_val, eig_vec = np.linalg.eigh(H_single_particle)
             h_flat = H_single_particle / np.abs(eig_val[0]) * band_energy + i * 1e-8  # flat band limit + small disperssion for numerical stabilty
             H_k_list.append(h_flat)
+            # H_k_list.append(H_single_particle)
             i += 1
             
     # creaing a block diagonal H_k matrix and dft to real space
@@ -232,10 +236,10 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x
     H_k = block_diag(*H_k_list)
 
     # dft matrix as a tensor protuct of dft in x and y axis and idenity in the sublattice
-    dft_matrix = np.kron(dft(Nx),(np.kron(dft(Ny),np.eye(2)))) / np.sqrt(N)
-    dft_inverse_matrix = np.kron(dft(Nx).T.conjugate(),(np.kron(dft(Ny).T.conjugate(),np.eye(2)))) / np.sqrt(N)
-    H_real_space = dft_inverse_matrix @ H_k @ dft_matrix
-    
+    dft_matrix = np.kron(dft(Nx, scale='sqrtn'),(np.kron(dft(Ny, scale='sqrtn'),np.eye(2))))
+    # dft_matrix = np.kron(lattice_dft(Nx),(np.kron(lattice_dft(Ny),np.eye(2))))
+    H_real_space = dft_matrix @ H_k @ dft_matrix.T.conjugate()
+
     if element_cutoff is not None:
         H_real_space[np.abs(H_real_space) < element_cutoff] = 0
     
@@ -376,6 +380,15 @@ def cite_index_2_z(index,mps, Ny):
     # z =  y + 1j * (x + 0.2 * sublattice)
     return z
 
+def lattice_dft(N):
+    dft_row = []
+    K = np.linspace(start=-np.pi, stop = np.pi, num = N, endpoint=False, dtype=np.complex128)
+    for i in range(N):
+        dft_row.append(np.exp(1j * i * K))
+    dft_matrix = np.array(dft_row, dtype=np.complex128)
+    return 1/np.sqrt(N) * dft_matrix
+
+
 # Implimintation of the translation operator for @state with @mps on lattice (@Nx,@Ny) in the (@Tx,@Ty) direction
 def translation_operator(state, mps, Nx, Ny, Tx = 0, Ty = 0):
     new_state = mps.zero_vector()
@@ -391,3 +404,15 @@ def translation_operator(state, mps, Nx, Ny, Tx = 0, Ty = 0):
         new_state[new_index] = (-1) ** parity * state[index]
     return new_state
 
+# Implimintation of the translation operator for @state with @mps on lattice (@Nx,@Ny) in the (@Tx,@Ty) direction
+def translation_matrix(mps, Nx, Ny, Tx = 0, Ty = 0):
+    col_list = []
+    for index in tqdm(range(mps.len)):
+        state = mps.zero_vector()
+        state[index] += 1
+        new_state = translation_operator(state,mps,Nx,Ny,Tx,Ty)
+        col_list.append(new_state)
+    
+    matrix = np.array(col_list).T
+    sparse_matrix = scipy.sparse.csr_matrix(matrix)
+    return sparse_matrix

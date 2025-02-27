@@ -107,7 +107,7 @@ def translation_invariant_ansatz(Nx, Ny, reps = 1, return_NN = False):
 
         # NN
         NN = []
-        for x_vector, y_vector in [(0,0), (0,1), (-1,0), (-1,1)]:
+        for x_vector, y_vector in [(0,0), (0,-1), (1,0), (1,-1)]:
             NN_tmp, ansatz_tmp = entangle_2_cites(x_vector=x_vector,y_vector=y_vector,sublattice_vector=1,Nx=Nx,Ny=Ny, param_name = str(param_counter))
             NN += NN_tmp
             ansatz = ansatz.compose(ansatz_tmp, range(N))
