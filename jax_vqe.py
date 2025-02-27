@@ -90,7 +90,7 @@ class VQE:
     def minimize(self):
         if self.config['random_initial_parametrs']:
             key = jax.random.PRNGKey(0)  # Initialize a random key
-            x0 = jnp.array(2 * jnp.pi * jax.random.uniform(key, shape=(self.ansatz.num_parameters(),),dtype=float))
+            x0 = jnp.array(2 * jnp.pi * jax.random.uniform(key, shape=(self.ansatz.num_parameters(),),dtype=float)) * 1e-1
         else:
             x0 = jnp.zeros(shape=(self.ansatz.num_parameters(),))
 
@@ -118,7 +118,7 @@ class VQE:
                 jac = self.jacobian(),
                 # method="cobyla",
                 # method="SLSQP",
-                # tol=0.00000001,
+                tol=1e-4,
                 # options={"maxiter":self.config['maxiter'], "rhobeg":0.1},
                 options = {
                 'ftol': 2.220446049250313e-09,  # Function tolerance
