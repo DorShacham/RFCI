@@ -22,7 +22,7 @@ else:
 
 
 import jax
-from jax.config import config
+from jax import config
 # Enable 64-bit computation
 config.update("jax_enable_x64", True)
 import jax.numpy as jnp

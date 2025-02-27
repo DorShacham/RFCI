@@ -9,7 +9,7 @@ data:
   p: -1
   q: 3 
 
-resarach_question: 'run (2,6) with overlap but energy opti'
+resarach_question: 'testing optimizer'
 
 config0:
   band_energy: 1
@@ -17,14 +17,14 @@ config0:
   ground_state_degeneracy: 3
   overlap_optimization: True
   maxiter: 10000000
-  layer_numer: 3
+  layer_numer: 1
   flux_gate_true: True
-  random_initial_parametrs: False
+  random_initial_parametrs: True
   loss: 
   # optimizer: 'my_optimizer'
   # optimizer: 'my_optimizer_V2'
   # optimizer: 'SPSA'
   # optimizer: 'SLSQP'
-  # optimizer: 'cobyla'
-  optimizer: 'BFGS'
-  cktp_iters: 200
+  optimizer: 'cobyla'
+  # optimizer: 'BFGS'
+  cktp_iters: 
