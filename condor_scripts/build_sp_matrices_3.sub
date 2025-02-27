@@ -1,5 +1,5 @@
 Universe = vanilla
-Executable = condor_scripts/build_matrix.sh
+Executable = condor_scripts/build_matrix_3.sh
 Arguments = $(ItemIndex) $(Item)
 environment = "HOME=/srv01/technion/dorsh"
 

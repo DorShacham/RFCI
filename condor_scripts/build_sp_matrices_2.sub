@@ -1,6 +1,6 @@
 Universe = vanilla
-Executable = condor_scripts/diag_sp_matrix.sh
-Arguments = $(ItemIndex) 
+Executable = condor_scripts/build_matrix_2.sh
+Arguments = $(ItemIndex) $(Item)
 environment = "HOME=/srv01/technion/dorsh"
 
 # Specify file transfer settings - the setting should ALWAYS be no!!!!
@@ -14,7 +14,7 @@ Log =  /storage/ph_lindner/dorsh/RFCI/output/condor_$(Process).log
 Initialdir = /storage/ph_lindner/dorsh/RFCI
 Request_Cpus = 6
 # if you don't define value for memory the default is 2gb it is advisable to specify a value
-Request_Memory = 35GB
+Request_Memory = 5GB
 Queue from /srv01/technion/dorsh/scripts/RFCI/RFCI/condor_scripts/spectral_flow_phi_values.txt
 
 
