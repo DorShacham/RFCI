@@ -45,7 +45,7 @@ def process_index(index,mps, H_sb, NN, interaction_strength, N, build = "interac
             for i in range(N):
                 for j in range(N):
                     if (i == j) and (i in state_perm):
-                        sparse_col[index,0] += H_sb[i,j]
+                        sparse_col[index,0] += H_sb[i,j].conjugate()
                     else:
                         if (i in state_perm) or (not (j in state_perm)):
                             continue 
@@ -56,7 +56,7 @@ def process_index(index,mps, H_sb, NN, interaction_strength, N, build = "interac
                             new_perm.insert(0,i)
                             parity, sorted_perm = permutation_parity(tuple(new_perm), return_sorted_array=True)
                             new_index = mps.perm_2_index(sorted_perm)
-                            sparse_col[new_index,0] += H_sb[i,j] * (-1)**k * (-1)**parity 
+                            sparse_col[new_index,0] += H_sb[i,j].conjugate() * (-1)**k * (-1)**parity 
             
         # Interaction terms
         if interacting_terms:
@@ -150,6 +150,7 @@ def _build(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase
         for y in range(Ny):
             n1 = cite_2_cite_index(x=x, y=y, sublattice=0, Ny=Ny)
             for delta_x,delta_y in [(0,0), (0,-1), (1,0), (1,-1)]:
+            # for delta_x,delta_y in [(0,0), (0,1), (-1,0), (-1,1)]:
                 n2 = cite_2_cite_index(x=(x + delta_x) % Nx, y=(y + delta_y) % Ny, sublattice=1, Ny=Ny)
                 NN.append((n1,n2))
 
@@ -214,7 +215,7 @@ def build_non_interacting_H(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi 
     return _build(Nx = Nx, Ny = Ny, n = n, H_sb = H_sb, band_energy = band_energy, phi = phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff = element_cutoff, multi_process = multi_process, max_workers = max_workers, multiprocess_func = multiprocess_func, build = "non interacting H")
 
 def build_interaction(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff = None, multi_process = False, max_workers = 6, multiprocess_func=None):
-    return _build(Nx = Nx, Ny = Ny, n = n, H_sb = H_sb, band_energy = band_energy, phi = phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff = element_cutoff, multi_process = multi_process, max_workers = max_workers, multiprocess_func = multiprocess_func, build = "interaction")
+    return _build(Nx = Nx, Ny = Ny, n = n, H_sb = H_sb, band_energy = band_energy, phi = phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff = element_cutoff, multi_process = False, max_workers = max_workers, multiprocess_func = multiprocess_func, build = "interaction")
 
 def build_local_potential(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff = None, multi_process = False, max_workers = 6, multiprocess_func=None):
     return _build(Nx = Nx, Ny = Ny, n = n, H_sb = H_sb, band_energy = band_energy, phi = phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff = element_cutoff, multi_process = multi_process, max_workers = max_workers, multiprocess_func = multiprocess_func, build = "local potential")
