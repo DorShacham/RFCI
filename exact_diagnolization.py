@@ -149,7 +149,7 @@ def _build(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase
     for x in range(Nx):
         for y in range(Ny):
             n1 = cite_2_cite_index(x=x, y=y, sublattice=0, Ny=Ny)
-            for delta_x,delta_y in [(0,0), (0,-1), (1,0), (1,-1)]:
+            for delta_x,delta_y in [(0,0), (0,-1), (-1,0), (-1,-1)]:
             # for delta_x,delta_y in [(0,0), (0,1), (-1,0), (-1,1)]:
                 n2 = cite_2_cite_index(x=(x + delta_x) % Nx, y=(y + delta_y) % Ny, sublattice=1, Ny=Ny)
                 NN.append((n1,n2))
