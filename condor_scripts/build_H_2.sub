@@ -1,5 +1,5 @@
 Universe = vanilla
-Executable = condor_scripts/run_tmp.sh
+Executable = condor_scripts/build_H_2.sh
 Arguments =
 environment = "HOME=/srv01/technion/dorsh"
 
