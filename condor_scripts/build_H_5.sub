@@ -1,0 +1,22 @@
+Universe = vanilla
+Executable = condor_scripts/run_tmp.sh
+Arguments =
+environment = "HOME=/srv01/technion/dorsh"
+
+# Specify file transfer settings - the setting should ALWAYS be no!!!!
+should_transfer_files = NO
+
+
+
+Output =  /storage/ph_lindner/dorsh/output.log
+Error =  /storage/ph_lindner/dorsh/error.log
+Log =  /storage/ph_lindner/dorsh/condor.log
+Initialdir = /storage/ph_lindner/dorsh/RFCI
+Request_Cpus = 10
+# if you don't define value for memory the default is 2gb it is advisable to specify a value
+Request_Memory = 15GB
+Queue
+
+
+
+
