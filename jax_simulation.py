@@ -42,7 +42,8 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
         np.save(f'data/states/Nx-{Nx}_Ny-{Ny}_q={q}_magnetic.npy',IQH_state)
 
     state = IQH_state
-    if np.linalg.norm(state - translation_operator(state,mps,Nx,Ny,Tx=0,Ty=1)) > 1e-5: # state is not symmetric
+    T_y_expectation = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=0,Ty=1)
+    if np.abs(T_y_expectation - 1) > 1e-5: # state is not symmetric
         sym_state = mps.zero_vector()
         for i in range(q):
             sym_state += (translation_operator(state,mps,Nx,Ny,Tx=0,Ty=i))

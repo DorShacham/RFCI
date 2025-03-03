@@ -118,7 +118,7 @@ class VQE:
                 jac = self.jacobian(),
                 # method="cobyla",
                 # method="SLSQP",
-                tol=1e-4,
+                tol=1e-3,
                 # options={"maxiter":self.config['maxiter'], "rhobeg":0.1},
                 options = {
                 'ftol': 2.220446049250313e-09,  # Function tolerance

@@ -45,7 +45,7 @@ def process_index(index,mps, H_sb, NN, interaction_strength, N, build = "interac
             for i in range(N):
                 for j in range(N):
                     if (i == j) and (i in state_perm):
-                        sparse_col[index,0] += H_sb[i,j].conjugate()
+                        sparse_col[index,0] += H_sb[i,j]
                     else:
                         if (i in state_perm) or (not (j in state_perm)):
                             continue 
@@ -56,7 +56,7 @@ def process_index(index,mps, H_sb, NN, interaction_strength, N, build = "interac
                             new_perm.insert(0,i)
                             parity, sorted_perm = permutation_parity(tuple(new_perm), return_sorted_array=True)
                             new_index = mps.perm_2_index(sorted_perm)
-                            sparse_col[new_index,0] += H_sb[i,j].conjugate() * (-1)**k * (-1)**parity 
+                            sparse_col[new_index,0] += H_sb[i,j] * (-1)**k * (-1)**parity 
             
         # Interaction terms
         if interacting_terms:

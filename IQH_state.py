@@ -130,7 +130,7 @@ class Multi_particle_state:
         for perm in perms_array:
             state_coeff = 1
             for electron_index in range(n):
-                state_coeff *= state_array[electron_index, perm[electron_index]].conjugate()
+                state_coeff *= state_array[electron_index, perm[electron_index]]
             
             parity, soreted_perm = permutation_parity(perm = perm, return_sorted_array = True)
             state_coeff *= (-1)**parity
@@ -154,7 +154,7 @@ class Multi_particle_state:
             for i in range(N):
                 for j in range(M):
                     if (i == j) and (i in state_perm):
-                        new_state[index] += H_sb[i,j].conjugate() * multi_particle_state[index]
+                        new_state[index] += H_sb[i,j] * multi_particle_state[index]
 
                     else:
                         # Ci_dagger * Ci_dagger = C_j |0> = 0 
@@ -171,7 +171,7 @@ class Multi_particle_state:
                             new_index = self.perm_2_index(sorted_perm)
                 
                             # Summing the new multi-particle state with the right coeff
-                            new_state[new_index] += H_sb[i,j].conjugate() * (-1)**k * (-1)**parity * multi_particle_state[index]
+                            new_state[new_index] += H_sb[i,j] * (-1)**k * (-1)**parity * multi_particle_state[index]
 
             if interaction_strength != 0:
                 for i,j in NN:
@@ -200,7 +200,7 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x
 # parametrs of the model
     N = Nx * Ny
     # phi = np.pi/4
-    t1 = -1
+    t1 = 1
     t2 = -(2-np.sqrt(2))/2 * t1
     # t2 = t1 / np.sqrt(2)
 
@@ -239,7 +239,7 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x
     # dft matrix as a tensor protuct of dft in x and y axis and idenity in the sublattice
     dft_matrix = np.kron(dft(Nx, scale='sqrtn'),(np.kron(dft(Ny, scale='sqrtn'),np.eye(2))))
     # dft_matrix = np.kron(lattice_dft(Nx),(np.kron(lattice_dft(Ny),np.eye(2))))
-    H_real_space = dft_matrix.T.conjugate() @ H_k @ dft_matrix
+    H_real_space = dft_matrix @ H_k @ dft_matrix.T.conjugate()
 
     if element_cutoff is not None:
         H_real_space[np.abs(H_real_space) < element_cutoff] = 0
@@ -321,7 +321,7 @@ def project_on_band(state,band, H, mps, return_k_occupation = False):
                     new_perm = list(perm)
                     del new_perm[l]
                     new_index = new_mps.perm_2_index(new_perm)
-                    new_state[new_index] += (-1)**l * state[index] * eig_vec[j,k]
+                    new_state[new_index] += (-1)**l * state[index] * eig_vec[j,k].conjugate()
             
     
         k_occupation.append(np.linalg.norm(new_state)**2)
