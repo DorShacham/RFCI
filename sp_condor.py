@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
     eigenvalues_list = []
     for i in tqdm(range(0,72 + 1)):
-        loaded = np.load(f'data/states/spectral_flow/Nx-{Nx}_Ny-{Ny}_{i}.npz')
+        loaded = np.load(f'/storage/ph_lindner/dorsh/RFCI/data/states/spectral_flow/Nx-{Nx}_Ny-{Ny}_{i}.npz')
         eigenvalues = loaded['eigenvalues']  
         eigenvalues_list.append(np.sort(eigenvalues))
 

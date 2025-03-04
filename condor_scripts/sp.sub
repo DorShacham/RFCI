@@ -1,6 +1,6 @@
 Universe = vanilla
 Executable = condor_scripts/sp.sh
-Arguments =
+Arguments = 3 5
 environment = "HOME=/srv01/technion/dorsh"
 
 # Specify file transfer settings - the setting should ALWAYS be no!!!!
