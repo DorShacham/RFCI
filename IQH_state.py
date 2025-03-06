@@ -232,7 +232,7 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x
                 h_flat = H_single_particle / np.abs(eig_val[0]) * band_energy + i * 1e-8  # flat band limit + small disperssion for numerical stabilty
                 H_k_list.append(h_flat)
             else:
-                H_k_list.append(H_single_particle+ i * 1e-8)   #  small disperssion for numerical stabilty
+                H_k_list.append(H_single_particle + i * 1e-8)   #  small disperssion for numerical stabilty
             i += 1
             
             
@@ -244,7 +244,7 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x
     # dft matrix as a tensor protuct of dft in x and y axis and idenity in the sublattice
     dft_matrix = np.kron(dft(Nx, scale='sqrtn'),(np.kron(dft(Ny, scale='sqrtn'),np.eye(2))))
     # dft_matrix = np.kron(lattice_dft(Nx),(np.kron(lattice_dft(Ny),np.eye(2))))
-    H_real_space = -dft_matrix @ H_k @ dft_matrix.T.conjugate()
+    H_real_space = dft_matrix @ H_k @ dft_matrix.T.conjugate()
 
     if element_cutoff is not None:
         H_real_space[np.abs(H_real_space) < element_cutoff] = 0

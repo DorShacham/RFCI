@@ -40,16 +40,18 @@ def add_magnetic_field(H_real_space, p, q, Nx, Ny, cites_per_uc):
     # return H_real_space
 
 # adding vector potential A = (By,0,0) 
+    H_real_space_magnetic = np.array(H_real_space)
     for x in range(Nx):
         for y in range(Ny):
             for sublattice in range(cites_per_uc):
-            # cite_index = cites_per_uc * (Ny * x + y ) + sublattice
                 cite_A_index = cites_per_uc * (Ny * x + y ) + sublattice
-                cite_B_index = cites_per_uc * (Ny * ((x + 1) % Nx) + y) + sublattice
-                hopping_phase = np.exp(1j * 2 * np.pi * (p / q) * y)
-                H_real_space[cite_B_index,cite_A_index] *= hopping_phase
-                H_real_space[cite_A_index,cite_B_index] *= hopping_phase.conjugate()
-    return H_real_space
+                for cite_B_index,t in enumerate(H_real_space[:,cite_2_cite_index(x=x,y=y,sublattice=sublattice,Ny=Ny)]):
+                    if np.abs(t) > 1e-1:
+                        x2, y2, sublattice2 = cite_index_2_cite(cite_B_index, Ny)
+                        delta_x =  (x2 + 0 * sublattice2 / 2) - (x + 0 * sublattice / 2)
+                        hopping_phase = np.exp(1j * 2 * np.pi * (p / q) * y * delta_x)
+                        H_real_space_magnetic[cite_B_index,cite_A_index] *= hopping_phase
+    return H_real_space_magnetic
 
 def magnetic_FT(H_real_space,Nx,Ny,q,cites_per_uc):
     N = Nx * Ny
@@ -106,7 +108,7 @@ def plot_BZ(Nx, Ny, p, q, model = 'basic'):
         H_real_space = build_basic_H(Nx,Ny)
     elif model == 'chern':
         cites_per_uc = 2
-        H_real_space = build_H(Nx,Ny)
+        H_real_space = build_H(Nx,Ny, flat_band=False)
     
     H_real_space = add_magnetic_field(np.array(H_real_space),p,q,Nx,Ny,cites_per_uc)
     H_k_space = magnetic_FT(H_real_space, Nx, Ny, q, cites_per_uc)
@@ -216,49 +218,49 @@ def flux_attch_on_torus_2_compact_state(state, mps, Nx, Ny):
     # return normalize(state)
 ## theta function test
 
-#%%
+# %%
 # Hofstadter_butterfly(Nx = 10, Ny = 10, q = 100)
 #%%
 # eigen_value_test(Nx=24,Ny=24,p=1,q=3, model = 'chern')
 
 # #%%
-# Nx = 20
-# Ny = 60
-# p = -1 
-# q = 3
-# print_band_and_C(Nx,Ny,p,q,model='chern')
+Nx = 20
+Ny = 30
+p = -1 
+q = 3
+print_band_and_C(Nx,Ny,p,q,model='chern')
 
-# #%%
+#%%
 # # Let us simulate taking a full magnetic chern band state and then increading the field (or turnning it off)
 # # s.t it will be in 1/3 of the non magnetic chern band and add 2 flux per electron 
 # # and calculate the energy
 
-# Nx = 2
-# Ny = 6
-# p = -1
-# q = 3
+Nx = 2
+Ny = 6
+p = -1
+q = 3
 
 # # electron number fill one 'Landau' level
-# n = Nx * Ny // q
+n = Nx * Ny // q
 
-# # H_real_space = build_H(Nx,Ny)
-# H_real_space = build_H(Nx,Ny)
-# H_real_space_magnetic = add_magnetic_field(np.array(H_real_space), p, q, Nx, Ny, cites_per_uc = 2)
+H_real_space = build_H(Nx,Ny,flat_band=False)
+H_real_space_magnetic = add_magnetic_field(np.array(H_real_space), p, q, Nx, Ny, cites_per_uc = 2)
+# H_real_space_magnetic = H_real_space
 
-# print("---1---")
+print("---1---")
 
-# state, mps = create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 1, H_sb = H_real_space_magnetic)
+state, mps = create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 1, H_sb = H_real_space_magnetic)
 
-# print("---2---")
+print("---2---")
 
 
-# # state = flux_attch_2_compact_state(np.array(state),mps,Ny)
+# state = flux_attch_2_compact_state(np.array(state),mps,Ny)
 # # state = flux_attch_on_torus_2_compact_state(np.array(state),mps,Nx,Ny)
 
 # print("---3---")
 
 
-# print_mp_state(state,Nx,Ny,mps)
+print_mp_state(state,Nx,Ny,mps)
 
 
 # NN = []
