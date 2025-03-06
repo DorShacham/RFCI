@@ -58,8 +58,8 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x
     
     return H_real_space
 
-Nx = 4
-Ny = 4
+Nx = 5
+Ny = 5
 
 H = build_H(Nx,Ny)
 
@@ -68,9 +68,22 @@ cy = -0.5
 
 # Set hopping terms
 lines = []
+x0 = Nx//2 + 1
+y0 = Ny//2 - 1
+c0 = 0
+for i,t in enumerate(H[:,cite_2_cite_index(x=x0,y=y0,sublattice=c0,Ny=Ny)]):
+    if np.abs(t) > 1e-5:
+        c = i % 2
+        y = ((i - c) // 2) % Ny
+        x = (((i - c) // 2) - y) // Ny
+        print(f"{(x-x0,y-y0,(c - c0)%2)} : {np.abs(t),np.angle(t) / np.pi}")
+        lines.append({'start': [x0 + cx * c0, y0 + cy *c0], 'end': [x + c * cx, y + c* cy], 't': t})
+
+
+
 x0 = Nx//2
 y0 = Ny//2
-c0 = 1
+c0 = 0
 for i,t in enumerate(H[:,cite_2_cite_index(x=x0,y=y0,sublattice=c0,Ny=Ny)]):
     if np.abs(t) > 1e-5:
         c = i % 2
