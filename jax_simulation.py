@@ -43,7 +43,7 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
 
     state = IQH_state
     T_y_expectation = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=0,Ty=1)
-    if np.abs(T_y_expectation - 1) > 1e-5: # state is not symmetric
+    if np.abs(np.abs(T_y_expectation) - 1) > 1e-5: # state is not symmetric
         sym_state = mps.zero_vector()
         for i in range(q):
             sym_state += (translation_operator(state,mps,Nx,Ny,Tx=0,Ty=i))

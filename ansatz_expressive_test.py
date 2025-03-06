@@ -48,7 +48,7 @@ n = config['data']['n']
 p = config['data']['p']
 q = config['data']['q']
 saving_dir = str(f"results/vqe_simulation/jax/ansatz_expressive_test/Nx-{Nx}_Ny-{Ny}_p-{p}_q-{q}")
-layer_numer_range = range(1,5)
+layer_numer_range = range(1,4)
 
 
 overlap_array_no_flux = []
