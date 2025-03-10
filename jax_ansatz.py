@@ -80,8 +80,8 @@ def _apply_TV_ansatz(state, param_set, data_array, row_indices_array, col_indice
 # A class that act with a translation invariante ansatz on a lattice of (@Nx,@Ny) with 2 sublattice cites and @n electrons
 class Jax_TV_ansatz:
     def __init__(self, Nx, Ny, n):
-        # NN = []; N = [(0,0), (0,-1), (1,0), (1,-1)]
-        bonds = [(0,0,1), (0,-1,1), (1,0,1), (1,-1,1)] # NN of the model
+        # NN = []; N = [(0,0), (0,1), (-1,0), (-1,1)]
+        bonds = [(0,0,1), (0,1,1), (-1,0,1), (-1,1,1)] # NN of the model
         self.num_bonds = len(bonds)
         self.params_per_bond = 6
         self.Nx = Nx
