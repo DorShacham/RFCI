@@ -13,7 +13,7 @@ from flux_attch import *
 from jax_vqe import *
 from exact_diagnolization import *
 from jax_ansatz import Jax_ansatz
-from chern_ins_magnetic import add_magnetic_field
+from chern_ins_magnetic import add_magnetic_field_chern
 
 
 
@@ -37,7 +37,7 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
     except:
         print("Calculting IQH state")
         H_real_space = build_H(Nx,Ny)
-        H_real_space_magnetic = add_magnetic_field(np.array(H_real_space), p, q, Nx, Ny, cites_per_uc = 2)
+        H_real_space_magnetic = add_magnetic_field_chern(np.array(H_real_space), p, q, Nx, Ny, cites_per_uc = 2)
         IQH_state, mps = create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 1, H_sb = H_real_space_magnetic)
         np.save(f'data/states/Nx-{Nx}_Ny-{Ny}_q={q}_magnetic.npy',IQH_state)
 
