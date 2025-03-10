@@ -122,6 +122,5 @@ for line in lines:
     # Place text at the midpoint
     plt.text(midpoint_x, midpoint_y, f'({np.abs(line["t"]):.2f}|({np.angle(line["t"])/np.pi:.2f}))', ha='center', va='center', color='black')
 
-plt.legend()
 plt.axis('equal')
 plt.show()
