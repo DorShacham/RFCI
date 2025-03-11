@@ -53,6 +53,8 @@ layer_numer_range = range(1,4)
 
 overlap_array_no_flux = []
 for layer_numer in layer_numer_range:
+    print(f"NO flux gate, layer number:{layer_numer}")
+
     id = wandb.util.generate_id()
     config['data']['id'] = id
 
@@ -72,6 +74,8 @@ for layer_numer in layer_numer_range:
 
 overlap_array = []
 for layer_numer in layer_numer_range:
+    print(f"flux gate, layer number:{layer_numer}")
+
     id = wandb.util.generate_id()
     config['data']['id'] = id
 
