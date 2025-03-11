@@ -51,23 +51,31 @@ def add_magnetic_field_square_lattice(H_real_space, p, q, Nx, Ny, cites_per_uc):
                 H_real_space[cite_A_index,cite_B_index] *= hopping_phase.conjugate()
     return H_real_space
 
-def add_magnetic_field_chern(H_real_space, p, q, Nx, Ny, cites_per_uc):
+def add_magnetic_field_chern(H_real_space, p, q, Nx, Ny):
 # adding vector potential A = (By,0,0) 
+    # sublattice location is (0.5,-0.5)
+    cites_per_uc = 2
+    x_pos = lambda x, sublattice: 2 * (x + sublattice / 2) 
+    y_pos = lambda y, sublattice: 2 * (y - sublattice / 2)
+    
     H_real_space_magnetic = np.array(H_real_space)
     for x1 in range(Nx):
         for y1 in range(Ny):
             for sublattice1 in range(cites_per_uc):
                 cite_A_index = cite_2_cite_index(x=x1,y=y1, sublattice=sublattice1,Ny=Ny)
                 for cite_B_index,t in enumerate(H_real_space[:,cite_A_index]):
-                    if np.abs(t) > 1e-6:
-                        x2, y2, sublattice2 = cite_index_2_cite(cite_B_index, Ny)
-                        # sublattice location is (0.5,-0.5)
-                        delta_x =   ((x2 + sublattice2 / 2) - (x1 + sublattice1 / 2)) 
-                        mean_x = ((x2 + sublattice2 / 2) + (x1 + sublattice1 / 2)) / 2
-                        delta_y =   ((y2 - sublattice2 / 2) - (y1 - sublattice1 / 2)) 
-                        mean_y =   ((y2 - sublattice2 / 2) + (y1 - sublattice1 / 2)) / 2
-                        hopping_phase = np.exp(1j * 2 * np.pi * (p / q) * ( mean_y * delta_x + delta_y * mean_x))
-                        H_real_space_magnetic[cite_B_index,cite_A_index] *= hopping_phase
+                    x2, y2, sublattice2 = cite_index_2_cite(cite_B_index, Ny)
+                    mean_y =   ( y_pos(y2,sublattice2) + y_pos(y1,sublattice1) ) / 2
+
+                    delta_x_array = np.array([x_pos(x2 ,sublattice2), x_pos(x2 + Nx ,sublattice2), x_pos(x2 - Nx ,sublattice2)]) - x_pos(x1 , sublattice1) 
+                    delta_x =   np.min(np.abs(delta_x_array)) * np.sign(delta_x_array[np.argmin(np.abs(delta_x_array))])
+                    if not np.array_equal(np.sort(np.abs(delta_x_array)), np.sort(np.unique(np.abs(delta_x_array)))) and np.abs(delta_x) >1e-6:
+                        # in case of a symmetry
+                        delta_x = 0
+                            
+
+                    hopping_phase = np.exp(1j * 2 * np.pi * (p / q) * ( delta_x * mean_y))
+                    H_real_space_magnetic[cite_B_index,cite_A_index] *= hopping_phase
     return H_real_space_magnetic
 
 def magnetic_FT(H_real_space,Nx,Ny,q,cites_per_uc):
@@ -97,7 +105,7 @@ def eigen_value_test(Nx,Ny,p,q, model = 'basic'):
     elif model == 'chern':
         cites_per_uc = 2
         H_real_space = build_H(Nx,Ny)
-        H_real_space = add_magnetic_field_chern(np.array(H_real_space), p, q, Nx, Ny, cites_per_uc)
+        H_real_space = add_magnetic_field_chern(np.array(H_real_space), p, q, Nx, Ny)
 
 
     print(np.sum(np.abs(H_real_space.T.conjugate() - H_real_space)))
@@ -130,8 +138,8 @@ def plot_BZ(Nx, Ny, p, q, model = 'basic'):
         H_real_space = add_magnetic_field_square_lattice(np.array(H_real_space),p,q,Nx,Ny,cites_per_uc)
     elif model == 'chern':
         cites_per_uc = 2
-        H_real_space = build_H(Nx,Ny, flat_band=False)
-        # H_real_space = add_magnetic_field_chern(np.array(H_real_space),p,q,Nx,Ny,cites_per_uc)
+        H_real_space = build_H(Nx,Ny, flat_band=True)
+        H_real_space = add_magnetic_field_chern(np.array(H_real_space),p,q,Nx,Ny)
     
     H_k_space = magnetic_FT(H_real_space, Nx, Ny, q, cites_per_uc)
     plt.matshow(np.abs(H_k_space[:10,:10]))
@@ -179,7 +187,7 @@ def chern_number(Nx,Ny,p,q, model = 'basic'):
     elif model == 'chern':
         cites_per_uc = 2
         H_real_space = build_H(Nx,Ny)
-        H_real_space = add_magnetic_field_chern(np.array(H_real_space), p, q, Nx, Ny, cites_per_uc)
+        H_real_space = add_magnetic_field_chern(np.array(H_real_space), p, q, Nx, Ny)
 
 
 
@@ -242,11 +250,23 @@ def flux_attch_on_torus_2_compact_state(state, mps, Nx, Ny):
 ## theta function test
 
 
-Nx = 12 * 2
-Ny = 12 * 2
-_ = plot_BZ(Nx,Ny, p = 0, q = 1, model='chern')
-
 # %%
+
+# Nx = 4
+# Ny = 3
+# H = build_H(Nx,Ny)
+# H_m = add_magnetic_field_chern(H, p = 1, q = 3, Nx = Nx ,Ny = Ny)
+# phase = (np.angle(H_m) - np.angle(H)) / (2 * np.pi)
+
+# tot_flux = 0
+# cite_A = cite_2_cite_index(0,0,1,Ny=Ny)
+# for x,y,s in [ (0,1,1),(1,1,1), (1,0,1),(0,0,1)]:
+#     cite_B = cite_2_cite_index(x,y,s,Ny=Ny)
+#     tot_flux += phase[cite_B,cite_A]
+#     cite_A = cite_B
+
+# print(tot_flux)
+
 
 # %%
 
@@ -256,9 +276,9 @@ _ = plot_BZ(Nx,Ny, p = 0, q = 1, model='chern')
 # eigen_value_test(Nx=24,Ny=24,p=1,q=3, model = 'chern')
 
 # #%%
-# Nx = 2
-# Ny = 6
-# p = -1 
+# Nx = 3 * 3
+# Ny = 6 * 3
+# p = 1
 # q = 3
 # print_band_and_C(Nx,Ny,p,q,model='chern')
 
@@ -271,14 +291,14 @@ _ = plot_BZ(Nx,Ny, p = 0, q = 1, model='chern')
 
 # Nx = 2
 # Ny = 6
-# p = 1
+# p = -1
 # q = 3
 
 # # # electron number fill one 'Landau' level
 # n = Nx * Ny // q
 # # n = 4
-# H_real_space = build_H(Nx,Ny,flat_band=False)
-# H_real_space_magnetic = add_magnetic_field_chern(np.array(H_real_space), p, q, Nx, Ny, cites_per_uc = 2)
+# H_real_space = build_H(Nx,Ny,flat_band=True)
+# H_real_space_magnetic = add_magnetic_field_chern(np.array(H_real_space), p, q, Nx, Ny)
 
 # print(np.sum(np.abs(H_real_space_magnetic.T.conjugate() - H_real_space_magnetic)))
 
@@ -299,6 +319,17 @@ _ = plot_BZ(Nx,Ny, p = 0, q = 1, model='chern')
 
 # print_mp_state(state,Nx,Ny,mps)
 
+# T_x_expectation = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=1,Ty=0)
+# T_y_expectation = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=0,Ty=3)
+# print(np.abs(T_x_expectation))
+# print(np.abs(T_y_expectation))
+# # print_mp_state(state,Nx,Ny,mps)
+
+# Kx = (np.angle(T_x_expectation)  / (2 * np.pi) * Nx) % Nx % Nx
+# Ky = (np.angle(T_y_expectation)  / (2 * np.pi) * Ny) % Ny % Ny
+# print((Kx,Ky))
+# print(Kx + Nx * Ky)
+
 
 # NN = []
 # for x in range(Nx):
@@ -318,6 +349,19 @@ _ = plot_BZ(Nx,Ny, p = 0, q = 1, model='chern')
 
 # %%
 
+# Nx = 4
+# Ny = 3
+# n = 1
+
+# H = build_H(Nx,Ny)
+# H = add_magnetic_field_chern(H,p=1,q=3,Nx = Nx, Ny = Ny)
+# mps = Multi_particle_state(2 * Nx * Ny, n)
+
+# Tx = translation_matrix(mps,Nx,Ny,Tx=1,Ty=0)
+# Ty = translation_matrix(mps,Nx,Ny,Tx=0,Ty=3)
+
+# print(np.sum(np.abs(Tx @ H - H @ Tx)))
+# print(np.sum(np.abs(Ty @ H - H @ Ty)))
 # %%
 
 # %%
