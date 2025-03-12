@@ -4,21 +4,41 @@ import platform
 import multiprocessing
 
 
-# Check the operating system
-if platform.system() == "Linux":
-    # Set environment variables to limit CPU usage on Linux
-    os.environ["OMP_NUM_THREADS"] = "10"
-    os.environ["MKL_NUM_THREADS"] = "10"
-    os.environ["NUMEXPR_NUM_THREADS"] = "10"
-    os.environ["OPENBLAS_NUM_THREADS"] = "10"
-    os.environ["JAX_NUM_THREADS"] = "10"
-    print("CPU usage limited to 10 threads on Linux.")
-elif platform.system() == "Darwin":
-    # macOS-specific behavior (no limitation)
-    print("Running on macOS. No CPU limitation applied.")
-    os.environ["XLA_FLAGS"] = "--xla_force_host_platform_device_count={}".format(multiprocessing.cpu_count())
-else:
-    print("Operating system not recognized. No changes applied.")
+
+from argparse import ArgumentParser
+import yaml
+from exact_diagnolization import *
+
+if __name__ == "__main__":
+    parser = ArgumentParser(description='Basic paser')
+    parser.add_argument('-Nx', type=int, help='Nx dimension of the lattice')
+    parser.add_argument('-Ny', type=int, help='Ny dimension of the lattice')
+    parser.add_argument('-cpu', type=int, help='number of cpus for multiprocess computation, if missing computes without multiprocess')
+
+    
+    args = parser.parse_args()
+    
+    Nx = args.Nx
+    Ny = args.Ny
+    cpu = args.cpu
+
+
+        # Check the operating system
+    if platform.system() == "Linux":
+        # Set environment variables to limit CPU usage on Linux
+        os.environ["OMP_NUM_THREADS"] = str(cpu)
+        os.environ["MKL_NUM_THREADS"] = str(cpu)
+        os.environ["NUMEXPR_NUM_THREADS"] = str(cpu)
+        os.environ["OPENBLAS_NUM_THREADS"] = str(cpu)
+        os.environ["JAX_NUM_THREADS"] = str(cpu)
+        print(f"CPU usage limited to {cpu} threads on Linux.")
+    elif platform.system() == "Darwin":
+        # macOS-specific behavior (no limitation)
+        print("Running on macOS. No CPU limitation applied.")
+        os.environ["XLA_FLAGS"] = "--xla_force_host_platform_device_count={}".format(multiprocessing.cpu_count())
+    else:
+        print("Operating system not recognized. No changes applied.")
+
 
 
 import jax
@@ -36,7 +56,7 @@ def lambda_constructor(loader, node):
 
 yaml.add_constructor('!lambda', lambda_constructor, Loader=yaml.FullLoader)
 
-config_file = './configs/jax/config_for_expressiv_test.yaml'
+config_file = str(f'./configs/jax/config_for_expressiv_test_Nx-{Nx}_Ny-{Ny}.yaml')
 with open(config_file, 'r') as stream:
         config = yaml.load(stream, yaml.FullLoader)
 config_list_keys = list(config)
