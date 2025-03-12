@@ -52,7 +52,8 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
     try:
         H = sparse.load_npz(str(f'data/matrix/H_Nx-{Nx}_Ny-{Ny}.npz'))
         interaction = sparse.load_npz(str(f'data/matrix/interactions_Nx-{Nx}_Ny-{Ny}.npz'))
-        H_many_body = jax_sparse.BCOO.from_scipy_sparse(H + config_list[0]['interaction_strength'] * interaction)
+        H_many_body =  float(config_list[0]['band_energy']) * (H + (Nx * Ny // 3) * sparse.identity(n = np.shape(H)[0], format='csr'))  + config_list[0]['interaction_strength'] * interaction
+        H_many_body = jax_sparse.BCOO.from_scipy_sparse(H_many_body)
     except:
         print("Calculting H_many_body matrix")
         H = build_non_interacting_H(Nx = Nx, Ny = Ny, n = n, multi_process= False)
@@ -61,7 +62,7 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
         interaction = build_interaction(Nx = Nx, Ny = Ny, n = n, multi_process= False)
         sparse.save_npz(str(f'data/matrix/interactions_Nx-{Nx}_Ny-{Ny}.npz'), interaction)
         
-        H_many_body = H + config_list[0]['interaction_strength'] * interaction
+        H_many_body =  float(config_list[0]['band_energy']) * (H + n * sparse.identity(n = np.shape(H)[0], format='csr'))  + config_list[0]['interaction_strength'] * interaction
         eigenvalues, eigenvectors = eigenvalues, eigenvectors = eigsh(H_many_body, k=4, which='SA')
         np.savez(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz', a=eigenvectors)
 
