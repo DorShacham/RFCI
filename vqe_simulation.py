@@ -4,7 +4,18 @@ import platform
 import multiprocessing
 from argparse import ArgumentParser
 import yaml
+import jax
+from jax import config
 
+# Enable 64-bit computation
+config.update("jax_enable_x64", True)
+import jax.numpy as jnp
+
+
+from exact_diagnolization import *
+import qiskit_simulation
+import jax_simulation
+import wandb
 
 def lambda_constructor(loader, node):
     return eval(f"lambda {node.value}")
@@ -25,7 +36,7 @@ if __name__ == "__main__":
     cpu = args.cpu
     if cpu is None:
         cpu = 1
-        
+
         # Check the operating system
     if platform.system() == "Linux":
         # Set environment variables to limit CPU usage on Linux
@@ -43,17 +54,7 @@ if __name__ == "__main__":
         print("Operating system not recognized. No changes applied.")
 
 
-    import jax
-    from jax import config
-    # Enable 64-bit computation
-    config.update("jax_enable_x64", True)
-    import jax.numpy as jnp
 
-
-    from exact_diagnolization import *
-    import qiskit_simulation
-    import jax_simulation
-    import wandb
 
     config_file = args.config_path
     # config_file = './config.yaml'
