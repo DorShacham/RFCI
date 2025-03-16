@@ -12,7 +12,7 @@ Output =  /storage/ph_lindner/dorsh/RFCI/output/vqe_Nx-3_Ny-6_layer-1_flux-True_
 Error =  /storage/ph_lindner/dorsh/RFCI/output/vqe_Nx-3_Ny-6_layer-1_flux-True_error.log
 Log =  /storage/ph_lindner/dorsh/RFCI/output/vqe_Nx-3_Ny-6_layer-1_flux-True_condor.log
 Initialdir = /storage/ph_lindner/dorsh/RFCI
-Request_Cpus = 1
+Request_Cpus = 2
 # if you don't define value for memory the default is 2gb it is advisable to specify a value
 Request_Memory = 35GB
 Queue
