@@ -92,7 +92,7 @@ if __name__ == "__main__":
     if build_H:
         print("Building H")
         if not (phi_y is None):
-            non_interacting_H = build_non_interacting_H(Nx, Ny, n=n,phase_shift_y= 0.25 * 2 * np.pi ,phase_shift_x= 2 * np.pi * phi_y, multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func)
+            non_interacting_H = build_non_interacting_H(Nx, Ny, n=n,phase_shift_y= 0.5 * 2 * np.pi ,phase_shift_x= 2 * np.pi * phi_y, multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func)
             os.makedirs(save_path, exist_ok=True)
             print("Saving H")
             sparse.save_npz(save_path + str(f'/H_Nx-{Nx}_Ny-{Ny}_{args.name}.npz'), non_interacting_H)
