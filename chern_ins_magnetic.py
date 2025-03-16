@@ -55,8 +55,8 @@ def add_magnetic_field_chern(H_real_space, p, q, Nx, Ny):
 # adding vector potential A = (By,0,0) 
     # sublattice location is (0.5,-0.5)
     cites_per_uc = 2
-    x_pos = lambda x, sublattice: 2 * (x + sublattice / 2) 
-    y_pos = lambda y, sublattice: 2 * (y - sublattice / 2)
+    x_pos = lambda x, sublattice: 1 * (x + sublattice / 2) 
+    y_pos = lambda y, sublattice: 1 * (y - sublattice / 2)
     
     H_real_space_magnetic = np.array(H_real_space)
     for x1 in range(Nx):
@@ -74,7 +74,7 @@ def add_magnetic_field_chern(H_real_space, p, q, Nx, Ny):
                         delta_x = 0
                             
 
-                    hopping_phase = np.exp(1j * 2 * np.pi * (p / q) * ( delta_x * mean_y))
+                    hopping_phase = np.exp(1j * 2 * np.pi * 2 *  (p / q) * ( delta_x * mean_y))
                     H_real_space_magnetic[cite_B_index,cite_A_index] *= hopping_phase
     return H_real_space_magnetic
 
@@ -250,7 +250,7 @@ def flux_attch_on_torus_2_compact_state(state, mps, Nx, Ny):
 ## theta function test
 
 
-# %%
+#%%
 
 # Nx = 4
 # Ny = 3
@@ -275,7 +275,7 @@ def flux_attch_on_torus_2_compact_state(state, mps, Nx, Ny):
 #%%
 # eigen_value_test(Nx=24,Ny=24,p=1,q=3, model = 'chern')
 
-# #%%
+#%%
 # Nx = 3 * 3
 # Ny = 6 * 3
 # p = 1
