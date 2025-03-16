@@ -6,7 +6,7 @@ data:
   Ny: 6
   n: 
   id:
-  p: 1
+  p: -1
   q: 3 
 
 resarach_question: 'testing overlap with 3 layers'
