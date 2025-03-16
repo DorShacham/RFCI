@@ -1,6 +1,6 @@
 Universe = vanilla
-Executable = condor_scripts/ansatz_expressive_test.sh
-Arguments = 3 6 1 True
+Executable = condor_scripts/run_vqe.sh
+Arguments = 3 6 $(Layer) $(Flux)
 environment = "HOME=/srv01/technion/dorsh"
 
 # Specify file transfer settings - the setting should ALWAYS be no!!!!
@@ -15,4 +15,15 @@ Initialdir = /storage/ph_lindner/dorsh/RFCI
 Request_Cpus = 2
 # if you don't define value for memory the default is 2gb it is advisable to specify a value
 Request_Memory = 35GB
-Queue
+Queue Layer, Flux from (
+    1 True
+    1 False
+    2 True
+    2 False
+    3 True
+    3 False
+    4 True
+    4 False
+    5 True 
+    5 False
+)

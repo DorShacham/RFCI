@@ -22,6 +22,8 @@ if __name__ == "__main__":
     Ny = args.Ny
     cpu = args.cpu
 
+    if cpu is None:
+        cpu = 1
 
         # Check the operating system
     if platform.system() == "Linux":
