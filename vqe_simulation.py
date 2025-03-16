@@ -12,10 +12,7 @@ config.update("jax_enable_x64", True)
 import jax.numpy as jnp
 
 
-from exact_diagnolization import *
-import qiskit_simulation
-import jax_simulation
-import wandb
+
 
 def lambda_constructor(loader, node):
     return eval(f"lambda {node.value}")
@@ -53,7 +50,10 @@ if __name__ == "__main__":
     else:
         print("Operating system not recognized. No changes applied.")
 
-
+    from exact_diagnolization import *
+    import qiskit_simulation
+    import jax_simulation
+    import wandb
 
 
     config_file = args.config_path
