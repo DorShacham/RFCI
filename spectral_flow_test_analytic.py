@@ -26,7 +26,7 @@ def Ek(kx, ky):
     h2 = np.array([[h11, np.conjugate(h12)], [h12, -h11]])
     eig_val = np.linalg.eigvalsh(h2)
     assert(np.abs(abs(eig_val[0]) - abs(eig_val[1])) < 1e-8)
-    return -abs(eig_val[0])
+    return 1e3 * n -abs(eig_val[0])
 
 def many_body_E(phi_x = 0, phi_y = 0, k = 7):
     Kx = np.linspace(0, 2 * np.pi,num=Nx,endpoint=False)
