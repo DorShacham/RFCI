@@ -43,15 +43,15 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
 
     
     state = IQH_state
-    T_y_expectation = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=0,Ty=1)
-    if np.abs(np.abs(T_y_expectation) - 1) > 1e-5: # state is not symmetric
-        # sym state = phase * (phase ** (-1/3) I + phase ** (-2/3) T + phase ** (-3/3) T^2) state
-        phase = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=0,Ty=3)
-        sym_state = np.array(state) * (phase ** (-1/3))
-        for i in range(1,q):
-            sym_state += (translation_operator(state,mps,Nx,Ny,Tx=0,Ty=i)) * (phase ** (-(i+1)/3))
-        sym_state = normalize(sym_state * phase)
-        state = sym_state
+    # T_y_expectation = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=0,Ty=1)
+    # if np.abs(np.abs(T_y_expectation) - 1) > 1e-5: # state is not symmetric
+    #     # sym state = phase * (phase ** (-1/3) I + phase ** (-2/3) T + phase ** (-3/3) T^2) state
+    #     phase = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=0,Ty=3)
+    #     sym_state = np.array(state) * (phase ** (-1/3))
+    #     for i in range(1,q):
+    #         sym_state += (translation_operator(state,mps,Nx,Ny,Tx=0,Ty=i)) * (phase ** (-(i+1)/3))
+    #     sym_state = normalize(sym_state * phase)
+    #     state = sym_state
 
     try:
         H = sparse.load_npz(str(f'data/matrix/H_Nx-{Nx}_Ny-{Ny}.npz'))
