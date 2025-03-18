@@ -26,7 +26,7 @@ def Ek(kx, ky):
     h2 = np.array([[h11, np.conjugate(h12)], [h12, -h11]])
     eig_val = np.linalg.eigvalsh(h2)
     assert(np.abs(abs(eig_val[0]) - abs(eig_val[1])) < 1e-8)
-    return 1e3 * n -abs(eig_val[0])
+    return 1e3 * (1 -abs(eig_val[0]))
 
 def many_body_E(phi_x = 0, phi_y = 0, k = 7):
     Kx = np.linspace(0, 2 * np.pi,num=Nx,endpoint=False)
@@ -37,6 +37,7 @@ def many_body_E(phi_x = 0, phi_y = 0, k = 7):
     for x,kx in enumerate(Kx):
         for y,ky in enumerate(Ky):
             E[x,y] = Ek(kx + phi_x / Nx, ky + phi_y / Ny) + i * 1e-8
+            i += 1
 
     E = np.reshape(E,(Nx * Ny))
     E = np.sort(E)
@@ -47,14 +48,14 @@ def many_body_E(phi_x = 0, phi_y = 0, k = 7):
     many_body_E_list = []
     for perm in perms:
         many_body_E_list.append(np.sum(E[np.array(perm)]))
-    sorted(many_body_E_list)
+    many_body_E_list = sorted(many_body_E_list)
     return many_body_E_list[:k]
 
 phi_list = np.array(range(0,72 + 1, step)) / 72 * 3 * (2 * np.pi)
 
 eigenvalues_list = []
 for phi_x in phi_list:
-    eigenvalues_list.append(many_body_E(phi_x = phi_x, phi_y = 0, k = 7))
+    eigenvalues_list.append(many_body_E(phi_x = 0, phi_y = phi_x, k = 7))
 
 eigenvalues_list = np.array(eigenvalues_list) 
 plt.figure()
@@ -81,30 +82,30 @@ plt.title(f"Spectral flow without interaction for ({Nx,Ny}) lattice \n(first 3 e
 # plt.savefig(f"./results/spectral_flow/interaction_shift/Nx-{Nx}_Ny-{Ny}/interaction-{interaction_strength}_k=3.jpg")
 
 
-eigenvalues_list = []
-for phi_y in phi_list:
-    eigenvalues_list.append(many_body_E(phi_x = 0, phi_y = phi_y, k = 7))
+# eigenvalues_list = []
+# for phi_y in phi_list:
+#     eigenvalues_list.append(many_body_E(phi_x = 0, phi_y = phi_y, k = 7))
 
-eigenvalues_list = np.array(eigenvalues_list) 
-plt.figure()
-plt.plot(phi_list,eigenvalues_list[:,0], "-.")
-plt.plot(phi_list,eigenvalues_list[:,1], "-.")
-plt.plot(phi_list,eigenvalues_list[:,2], "-.")
-plt.plot(phi_list,eigenvalues_list[:,3], "-.")
-plt.plot(phi_list,eigenvalues_list[:,4], "-.")
-plt.plot(phi_list,eigenvalues_list[:,5], "-.")
-plt.plot(phi_list,eigenvalues_list[:,6], "-.")
-plt.grid()
-plt.xlabel("phi_y")
-plt.title(f"Spectral flow without interaction for ({Nx,Ny}) lattice \n(first 7 eigenvalues shifted by the lowest value)")
-# plt.savefig(f"./results/spectral_flow/interaction_shift/Nx-{Nx}_Ny-{Ny}/interaction-{interaction_strength}_k=7.jpg")
+# eigenvalues_list = np.array(eigenvalues_list) 
+# plt.figure()
+# plt.plot(phi_list,eigenvalues_list[:,0], "-.")
+# plt.plot(phi_list,eigenvalues_list[:,1], "-.")
+# plt.plot(phi_list,eigenvalues_list[:,2], "-.")
+# plt.plot(phi_list,eigenvalues_list[:,3], "-.")
+# plt.plot(phi_list,eigenvalues_list[:,4], "-.")
+# plt.plot(phi_list,eigenvalues_list[:,5], "-.")
+# plt.plot(phi_list,eigenvalues_list[:,6], "-.")
+# plt.grid()
+# plt.xlabel("phi_y")
+# plt.title(f"Spectral flow without interaction for ({Nx,Ny}) lattice \n(first 7 eigenvalues shifted by the lowest value)")
+# # plt.savefig(f"./results/spectral_flow/interaction_shift/Nx-{Nx}_Ny-{Ny}/interaction-{interaction_strength}_k=7.jpg")
 
 
-plt.figure()
-plt.plot(phi_list,eigenvalues_list[:,0], "-.")
-plt.plot(phi_list,eigenvalues_list[:,1], "-.")
-plt.plot(phi_list,eigenvalues_list[:,2], "-.")
-plt.grid()
-plt.xlabel("phi_y")
-plt.title(f"Spectral flow without interaction for ({Nx,Ny}) lattice \n(first 3 eigenvalues shifted by the lowest value)")
-# plt.savefig(f"./results/spectral_flow/interaction_shift/Nx-{Nx}_Ny-{Ny}/interaction-{interaction_strength}_k=3.jpg")
+# plt.figure()
+# plt.plot(phi_list,eigenvalues_list[:,0], "-.")
+# plt.plot(phi_list,eigenvalues_list[:,1], "-.")
+# plt.plot(phi_list,eigenvalues_list[:,2], "-.")
+# plt.grid()
+# plt.xlabel("phi_y")
+# plt.title(f"Spectral flow without interaction for ({Nx,Ny}) lattice \n(first 3 eigenvalues shifted by the lowest value)")
+# # plt.savefig(f"./results/spectral_flow/interaction_shift/Nx-{Nx}_Ny-{Ny}/interaction-{interaction_strength}_k=3.jpg")
