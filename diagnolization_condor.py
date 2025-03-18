@@ -50,7 +50,7 @@ if __name__ == "__main__":
     interaction = sparse.load_npz(str(f'data/matrix/interactions_Nx-{Nx}_Ny-{Ny}.npz'))
 
     band_energy = 1e3
-    interaction_strength = 2
+    interaction_strength = 0
     H = band_energy * (H + n * sparse.identity(n = np.shape(H)[0], format='csr'))  + interaction_strength * interaction
     #%%
     print('Diaganolizing')
