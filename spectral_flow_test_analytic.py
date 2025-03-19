@@ -8,8 +8,8 @@ from tqdm import tqdm
 
 
 
-Nx = 5
-Ny = 3
+Nx = 3
+Ny = 6
 n = Nx * Ny // 3
 # parametrs of the model
 N = Nx * Ny
@@ -55,7 +55,7 @@ phi_list = np.array(range(0,72 + 1, step)) / 72 * 3 * (2 * np.pi)
 
 eigenvalues_list = []
 for phi_x in phi_list:
-    eigenvalues_list.append(many_body_E(phi_x = 0, phi_y = phi_x, k = 7))
+    eigenvalues_list.append(many_body_E(phi_x = 0.1, phi_y = phi_x, k = 7))
 
 eigenvalues_list = np.array(eigenvalues_list) 
 plt.figure()
