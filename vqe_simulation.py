@@ -4,6 +4,7 @@ import platform
 import multiprocessing
 from argparse import ArgumentParser
 import yaml
+import pickle
 import jax
 from jax import config
 
@@ -23,6 +24,7 @@ yaml.add_constructor('!lambda', lambda_constructor, Loader=yaml.FullLoader)
 if __name__ == "__main__":
     parser = ArgumentParser(description='Basic paser')
     parser.add_argument('--config_path', type=str, help='Path to the configuration file')
+    parser.add_argument('--resume_run', type=str, help='Resume run [id of the run should be given as input] from the last saved check point')
     parser.add_argument('--log', action='store_true', help='Turn on the wandb')
     parser.add_argument('--save', action='store_true', help='Save results localy')
     parser.add_argument('-cpu', type=int, help='number of cpus for multiprocess computation, if missing computes without multiprocess')
@@ -64,6 +66,8 @@ if __name__ == "__main__":
     config_list = [config[key] for key in config_list_keys if key is not None and 'config' in key]
     log = args.log
 
+    
+
     Nx = config['data']['Nx']
     Ny = config['data']['Ny']
     n = config['data']['n']
@@ -71,18 +75,37 @@ if __name__ == "__main__":
     if config['simulation_type'] == 'jax':
         p = config['data']['p']
         q = config['data']['q']
-        if log:
-                id = wandb.util.generate_id()
-                config['data']['id'] = id
 
+        if log:
+            if args.resume_run is not None:
+                id = args.resume_run
+                path = str(f"results/vqe_simulation/jax/Nx-{Nx}_Ny-{Ny}_p-{p}_q-{q}/{id}/optimization_0/cktp.pickle")
+                with open(path, 'rb') as file:
+                    chekpoint = pickle.load(file)
+                config_list[0]['cost_history_dict'] = chekpoint
+                config_list[0]['resume_run'] = True
                 wandb.init(
-                    # set the wandb project where this run will be logged
                     project="RFCI-vqe",
                     name= f"Nx-{Nx}_Ny-{Ny}_p-{p}_q-{q}/{id}",
-                    id = id,
-                    # track hyperparameters and run metadata
-                    config= config
+                    config= config,
+                    id = args.resume_run,
+                    resume = "must"
                     )
+                
+            
+            else:
+                id = wandb.util.generate_id()
+                config_list[0]['resume_run'] = False
+
+            config['data']['id'] = id
+            wandb.init(
+                # set the wandb project where this run will be logged
+                project="RFCI-vqe",
+                name= f"Nx-{Nx}_Ny-{Ny}_p-{p}_q-{q}/{id}",
+                id = id,
+                # track hyperparameters and run metadata
+                config= config,
+                )
         saving_path = str(f"results/vqe_simulation/jax/Nx-{Nx}_Ny-{Ny}_p-{p}_q-{q}/{id}")
         jax_simulation.vqe_simulation(Nx = Nx, Ny = Ny, config_list = config_list, n = n, p=p, q=q, pre_ansatz = None,saveto = saving_path, log = log)
     

@@ -40,7 +40,9 @@ class VQE:
 
         self.config_i = config['config_i']
         
-
+        self.resume_run  = config['resume_run']
+        if self.resume_run:
+            self.cost_history_dict = config['cost_history_dict']
 
         
 
@@ -54,13 +56,18 @@ class VQE:
 
         if (not for_grad):
             self.cost_history_dict["iters"] += 1
+            self.cost_history_dict["step_size"] = np.linalg.norm(params - self.cost_history_dict["prev_vector"])
             self.cost_history_dict["prev_vector"] = params
             self.cost_history_dict["cost_history"].append(energy)
 
             if (self.config["cktp_iters"] is not None) and  (self.cost_history_dict["iters"] % self.config["cktp_iters"] == 0) and self.log:
-                print_mp_state(state, self.config['Nx'], self.config['Ny'], self.config['mps'], saveto=str(self.path) + str(f'/electron_density_{self.cost_history_dict["iters"]}.jpg'))
-                wandb.log({"Electron Density": wandb.Image(str(self.path) + str(f'/electron_density_{self.cost_history_dict["iters"]}.jpg'), caption=f"Config {self.config_i} iter {self.cost_history_dict['iters']}")}, commit = False) 
-        
+                # printing and saving result every cktp
+                # print_mp_state(state, self.config['Nx'], self.config['Ny'], self.config['mps'], saveto=str(self.path) + str(f'/electron_density_{self.cost_history_dict["iters"]}.jpg'))
+                # wandb.log({"Electron Density": wandb.Image(str(self.path) + str(f'/electron_density_{self.cost_history_dict["iters"]}.jpg'), caption=f"Config {self.config_i} iter {self.cost_history_dict['iters']}")}, commit = False) 
+                if self.path is not None:
+                    with open(str(self.path) + str('/cktp.pickle'), 'wb') as handle:
+                        pickle.dump(self.cost_history_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
         if self.ground_states is not None:
             overlap = sbuspace_probability(state,subspace=self.ground_states)
             if (not for_grad):
@@ -73,6 +80,7 @@ class VQE:
                 {
                     f'Energy_config_{self.config_i}': energy,
                     f'Cost_config_{self.config_i}': cost,
+                    f'step': self.cost_history_dict['iters']
                 }
             )
         elif not for_grad:
@@ -88,16 +96,22 @@ class VQE:
 
 # start the optimization proccess. all data on optimization is saved in self.cost_history_dict
     def minimize(self):
-        if self.config['random_initial_parametrs']:
-            key = jax.random.PRNGKey(0)  # Initialize a random key
-            x0 = jnp.array(2 * jnp.pi * jax.random.uniform(key, shape=(self.ansatz.num_parameters(),),dtype=float)) * 1e-1
-        else:
-            x0 = jnp.zeros(shape=(self.ansatz.num_parameters(),))
+        if not self.resume_run:
+            if self.config['random_initial_parametrs']:
+                key = jax.random.PRNGKey(0)  # Initialize a random key
+                x0 = jnp.array(2 * jnp.pi * jax.random.uniform(key, shape=(self.ansatz.num_parameters(),),dtype=float)) * 1e-1
+            else:
+                x0 = jnp.zeros(shape=(self.ansatz.num_parameters(),))
 
-        if self.config['flux_gate_true']:
-            init_flux_params = self.ansatz.flux_gate.get_inital_params()
-            x0 = x0.at[:self.ansatz.flux_gate.num_parameters()].set(init_flux_params)
-        
+            if self.config['flux_gate_true']:
+                init_flux_params = self.ansatz.flux_gate.get_inital_params()
+                x0 = x0.at[:self.ansatz.flux_gate.num_parameters()].set(init_flux_params)
+            
+            self.cost_history_dict["prev_vector"] = x0
+            step_size = 1
+        else:
+            x0 = self.cost_history_dict["prev_vector"]
+            step_size = 1.1 * self.cost_history_dict["step_size"]
         # x0 = x0.astype(jnp.float64)
 
 
@@ -121,6 +135,7 @@ class VQE:
                 tol=1e-3,
                 # options={"maxiter":self.config['maxiter'], "rhobeg":0.1},
                 options = {
+                'rhobeg': step_size,
                 'ftol': 2.220446049250313e-09,  # Function tolerance
                 'gtol': 1e-08,  # Gradient tolerance
                 # 'eps': 1e-08,  # Step size for numerical approximation
