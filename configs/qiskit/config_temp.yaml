@@ -1,7 +1,7 @@
 data:
   name: RFCI
-  Nx: 3
-  Ny: 3
+  Nx: 2
+  Ny: 6
   extention_factor: 1
   n: 
   id: 

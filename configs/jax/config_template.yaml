@@ -2,11 +2,11 @@ simulation_type: jax
 
 data:
   name: RFCI
-  Nx: 5
-  Ny: 3
+  Nx: 2
+  Ny: 6
   n: 
   id:
-  p: -1
+  p: 1
   q: 3 
 
 resarach_question: 'testing overlap with 4 layer'
@@ -18,7 +18,7 @@ config0:
   overlap_optimization: True
   maxiter: 10000000
   layer_numer: 4
-  flux_gate_true: False
+  flux_gate_true: True
   random_initial_parametrs: True
   loss: 
   # optimizer: 'my_optimizer'
@@ -27,4 +27,4 @@ config0:
   # optimizer: 'SLSQP'
   optimizer: 'cobyla'
   # optimizer: 'BFGS'
-  cktp_iters: 
+  cktp_iters: 100
