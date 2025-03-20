@@ -40,7 +40,10 @@ class VQE:
 
         self.config_i = config['config_i']
         
-        self.resume_run  = config['resume_run']
+        if 'resume_run' in config:
+            self.resume_run  = config['resume_run']
+        else:
+            self.resume_run = False
         if self.resume_run:
             self.cost_history_dict = config['cost_history_dict']
 
