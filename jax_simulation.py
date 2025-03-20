@@ -96,7 +96,7 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
                 loaded = np.load(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz')
                 eigenvectors = loaded['a']            
             except:
-                eigenvalues, eigenvectors = eigenvalues, eigenvectors = eigsh(H_many_body, k=4, which='SA')
+                eigenvalues, eigenvectors = eigenvalues, eigenvectors = eigsh(H_many_body.tocsr(), k=4, which='SA')
                 np.savez(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz', a=eigenvectors)
             eigenvectors = eigenvectors[:,:ground_state_degeneracy].T
         else:
