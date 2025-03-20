@@ -96,7 +96,8 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
                 loaded = np.load(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz')
                 eigenvectors = loaded['a']            
             except:
-                eigenvalues, eigenvectors = exact_diagnolization(Nx, Ny, band_energy=config_dict['band_energy'], interaction_strength=config_dict['interaction_strength'],k=config_dict['ground_state_degeneracy'],multi_process=False, save_result=False, show_result=False)
+                eigenvalues, eigenvectors = eigenvalues, eigenvectors = eigsh(H_many_body, k=4, which='SA')
+                np.savez(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz', a=eigenvectors)
             eigenvectors = eigenvectors[:,:ground_state_degeneracy].T
         else:
             eigenvectors = None
