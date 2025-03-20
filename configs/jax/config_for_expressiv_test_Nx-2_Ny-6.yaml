@@ -27,4 +27,4 @@ config0:
   # optimizer: 'SLSQP'
   optimizer: 'cobyla'
   # optimizer: 'BFGS'
-  cktp_iters: 1000
+  cktp_iters: 100
