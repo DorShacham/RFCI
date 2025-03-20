@@ -1,0 +1,29 @@
+Universe = vanilla
+Executable = condor_scripts/run_vqe.sh
+Arguments = 5 3 $(Layer) $(Flux)
+environment = "HOME=/srv01/technion/dorsh"
+
+# Specify file transfer settings - the setting should ALWAYS be no!!!!
+should_transfer_files = NO
+
+
+
+Output =  /storage/ph_lindner/dorsh/RFCI/output/vqe_Nx-3_Ny-6_layer-$(Layer)_flux-$(Flux)_output.log
+Error =  /storage/ph_lindner/dorsh/RFCI/output/vqe_Nx-3_Ny-6_layer-$(Layer)_flux-$(Flux)_error.log
+Log =  /storage/ph_lindner/dorsh/RFCI/output/vqe_Nx-3_Ny-6_layer-$(Layer)_flux-$(Flux)_condor.log
+Initialdir = /storage/ph_lindner/dorsh/RFCI
+Request_Cpus = 10
+# if you don't define value for memory the default is 2gb it is advisable to specify a value
+Request_Memory = 15GB
+Queue Layer, Flux from (
+    1 True
+    1 False
+    2 True
+    2 False
+    3 True
+    3 False
+    4 True
+    4 False
+    5 True 
+    5 False
+)

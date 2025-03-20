@@ -1,0 +1,30 @@
+simulation_type: jax
+
+data:
+  name: RFCI
+  Nx: 3
+  Ny: 6
+  n: 
+  id:
+  p: -1
+  q: 3 
+
+resarach_question: 'testing overlap with 4 layer'
+
+config0:
+  band_energy: 1e3
+  interaction_strength: 2
+  ground_state_degeneracy: 3
+  overlap_optimization: True
+  maxiter: 100000
+  layer_numer: 4
+  flux_gate_true: True
+  random_initial_parametrs: True
+  loss: 
+  # optimizer: 'my_optimizer'
+  # optimizer: 'my_optimizer_V2'
+  # optimizer: 'SPSA'
+  # optimizer: 'SLSQP'
+  optimizer: 'cobyla'
+  # optimizer: 'BFGS'
+  cktp_iters: 10
