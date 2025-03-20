@@ -143,7 +143,7 @@ def _build(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase
         
         
     if H_sb is None:
-        H_sb = build_H(Nx=Nx, Ny=Ny, band_energy = band_energy, phi=phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff=element_cutoff,flat_band=False)
+        H_sb = build_H(Nx=Nx, Ny=Ny, band_energy = band_energy, phi=phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff=element_cutoff,flat_band=True)
 
     NN = []
     for x in range(Nx):
