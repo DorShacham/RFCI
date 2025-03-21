@@ -1,86 +1,50 @@
 #%%
+from IQH_state import *
+from flux_attch import *
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.linalg import block_diag, dft, expm
-from tqdm import tqdm
-from scipy import sparse
-from scipy.sparse.linalg import eigsh
-from exact_diagnolization import *
-from IQH_state import *
+from jax_ansatz import *
+import pickle
+from chern_ins_magnetic import *
+from jax_vqe import sbuspace_probability
 
-Nx = 2
+p = -1
+q = 3
+Nx = 3
 Ny = 6
+n = Nx * Ny // 3
+mps = Multi_particle_state(2 * Nx * Ny, n)
 
-# H_sb = build_H(Nx,Ny, M = 10)
-# H = build_non_interacting_H(Nx,Ny, H_sb=H_sb)
-H = sparse.load_npz(str(f'data/matrix/H_Nx-{Nx}_Ny-{Ny}.npz'))
-interaction = sparse.load_npz(str(f'data/matrix/interactions_Nx-{Nx}_Ny-{Ny}.npz'))
 
-interaction_strength = 2
+loaded2 = np.load(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz')
+eigenvectors = loaded2['a']
+state = np.load(f'data/states/Nx-{Nx}_Ny-{Ny}_q=3_magnetic.npy')
 
-H = H  + interaction_strength * interaction
-#%%
-print("Diaganolizing")
-eigenvalues, eigenvectors = eigsh(H, k=4, which='SA')
-np.savez(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz', a=eigenvectors)
-#%%
-print("creating results")
-from IQH_state import *
-save_result = True
-show_result = True
-path = str(f'results/Exact_Diagnolization/Nx-{Nx}_Ny-{Ny}')
-N = Nx * Ny
-n = N // 3
-band_energy = 1
-interaction_strength = interaction_strength
-mps = Multi_particle_state(2 * N, n)
+v = np.array([np.array(state),translation_operator(state,mps,Nx,Ny,Tx=0,Ty=1),translation_operator(state,mps,Nx,Ny,Tx=0,Ty=2)])
 
-eigen_pairs = list(zip(eigenvalues, eigenvectors.T))
-eigen_pairs.sort(key=lambda x: x[0])
-eigenvalues, eigenvectors = zip(*eigen_pairs)
-eigenvalues = np.array(eigenvalues)
-eigenvectors = np.array(eigenvectors).T  # Transpose back to original shape
+for a in range(3):
+    state = np.load(f'data/states/Nx-{Nx}_Ny-{Ny}_q=3_magnetic.npy')
+    print(f"-------------\n\na={a}:")
+    if True: # state is not symmetric
+        # sym state = phase * (phase ** (-1/3) I + phase ** (-2/3) T + phase ** (-3/3) T^2) state
+        phase = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=0,Ty=3)
+        print(f"phase:{phase}")
+        sym_state = np.array(state) * (phase ** (-1/3)) * np.exp(1j * 2 * np.pi / (-3) * a)
+        for i in range(1,q):
+            sym_state += v[i] * (phase ** (-(i+1)/3)) * np.exp(1j * 2 * np.pi / (-3) * (i+1) * a)
+        state = normalize(sym_state * phase)
 
-if show_result or save_result:
-    plt.figure()
-    plt.plot(np.ones(len(eigenvalues)), eigenvalues, ".")
-if save_result:
-    plt.savefig(path + str('/eigenvalues.jpg'))
-    print_mp_state(eigenvectors[:,0],Nx,Ny,mps,saveto= path + str("/ev0.jpg"))
-    print_mp_state(eigenvectors[:,1],Nx,Ny,mps,saveto= path + str("/ev1.jpg"))
-    print_mp_state(eigenvectors[:,2],Nx,Ny,mps,saveto= path + str("/ev2.jpg"))
-    print_mp_state(eigenvectors[:,3],Nx,Ny,mps,saveto= path + str("/ev3.jpg"))
-    
-    with open(path + str('/data.txt'), 'w') as file:
-        file_dict = {"Nx":Nx, "Ny":Ny, "n":n, "band_energy": band_energy, "interaction_strength":interaction_strength,"eigenvalues":eigenvalues}
-        file.write(str(file_dict))
-elif show_result:
-    print_mp_state(eigenvectors[:,0],Nx,Ny,mps,saveto= None)
-    print_mp_state(eigenvectors[:,1],Nx,Ny,mps,saveto= None)
-    print_mp_state(eigenvectors[:,2],Nx,Ny,mps,saveto= None)
-    print_mp_state(eigenvectors[:,3],Nx,Ny,mps,saveto= None)
 
-#%%
-print("Calculiting k-space")
-M=0
-# plot k-space occupation
-N =  Nx * Ny
-n = N // 3
-mps = Multi_particle_state(2 * N, n)
-for i in range(4):
-    state = eigenvectors[:,i]
-    k_space_lower_band = project_on_band(state = state, mps = mps, band = -1, H = build_H(Nx,Ny), return_k_occupation=True)
-    k_space_upper_band = project_on_band(state = state, mps = mps, band = 1, H = build_H(Nx,Ny), return_k_occupation=True)
 
-    print(np.sum(k_space_lower_band))
-    print(np.sum(k_space_upper_band))
+    # state = ansatz.apply_ansatz(params=params,state=state)
+    T_x_expectation = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=1,Ty=0)
+    T_y_expectation = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=0,Ty=1)
+    print(np.abs(T_x_expectation))
+    print(np.abs(T_y_expectation))
+    # print(np.linalg.norm(state - translation_operator(state,mps,Nx,Ny,Tx=0,Ty=3)))
+    # print_mp_state(state,Nx,Ny,mps)
 
-    plt.figure()
-    plt.plot(range(len(k_space_lower_band)), k_space_lower_band, "*", label = "lower band")
-    plt.plot(range(len(k_space_lower_band)), k_space_upper_band, "*", label = "upper band")
-    plt.grid()
-    plt.legend()
-    plt.xlabel(r"$k_y + N_y k_x$")
-    plt.ylabel(r"$n(k_x,k_y)$")
-    plt.title(f"interaction_strength = {interaction_strength}, M = {M}")
-    plt.savefig(path + str(f'/n_k-{interaction_strength}_M-{M}_k-{i}.jpg'))
+    Kx = (np.angle(T_x_expectation)  / (2 * np.pi) * Nx) % Nx % Nx
+    Ky = (np.angle(T_y_expectation)  / (2 * np.pi) * Ny) % Ny % Ny
+    print((Kx,Ky))
+    print(Kx + Nx * Ky)
+    print(f"subspace probe:{sbuspace_probability(state,subspace=eigenvectors.T)}")

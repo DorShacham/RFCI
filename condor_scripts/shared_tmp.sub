@@ -1,0 +1,22 @@
+Universe = vanilla
+Executable = condor_scripts/shared_tmp.sh
+Arguments =
+environment = "HOME=/srv01/technion/dorsh"
+
+# Specify file transfer settings - the setting should ALWAYS be no!!!!
+#should_transfer_files = NO
+
+
+
+Output =  /storage/ph_lindner/dorsh/RFCI/output/shared_tmp_output.log
+Error =  /storage/ph_lindner/dorsh/RFCI/output/shared_tmp_error_log
+Log =  /storage/ph_lindner/dorsh/RFCI/output/shared_tmp_condor.log
+Initialdir = /storage/ph_lindner/dorsh/RFCI
+Request_Cpus = 1
+# if you don't define value for memory the default is 2gb it is advisable to specify a value
+Request_Memory = 5GB
+Queue
+
+
+
+
