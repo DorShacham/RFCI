@@ -107,7 +107,7 @@ class VQE:
         if not self.resume_run:
             if self.config['random_initial_parametrs']:
                 key = jax.random.PRNGKey(0)  # Initialize a random key
-                x0 = jnp.array(2 * jnp.pi * jax.random.uniform(key, shape=(self.ansatz.num_parameters(),),dtype=float)) * 1e-1
+                x0 = jnp.array(2 * jnp.pi * jax.random.uniform(key, shape=(self.ansatz.num_parameters(),),dtype=jnp.float64)) * 1e-1
             else:
                 x0 = jnp.zeros(shape=(self.ansatz.num_parameters(),))
 
