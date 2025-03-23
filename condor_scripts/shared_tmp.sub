@@ -14,7 +14,7 @@ Log =  /storage/ph_lindner/dorsh/RFCI/output/shared_tmp_condor.log
 Initialdir = /storage/ph_lindner/dorsh/RFCI
 Request_Cpus = 1
 # if you don't define value for memory the default is 2gb it is advisable to specify a value
-Request_Memory = 5GB
+Request_Memory = 10GB
 Queue
 
 
