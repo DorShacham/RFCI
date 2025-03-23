@@ -34,8 +34,11 @@ for a in range(3):
         state = normalize(sym_state * phase)
 
 
-
-    # state = ansatz.apply_ansatz(params=params,state=state)
+    key = jax.random.PRNGKey(0)  # Initialize a random key
+    x0 = jnp.array(2 * jnp.pi * jax.random.uniform(key, shape=(ansatz.num_parameters(),),dtype=float)) * 1e-1
+    init_flux_params = ansatz.flux_gate.get_inital_params()
+    x0 = x0.at[:ansatz.flux_gate.num_parameters()].set(init_flux_params)
+    state = ansatz.apply_ansatz(params=x0,state=state)
     T_x_expectation = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=1,Ty=0)
     T_y_expectation = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=0,Ty=1)
     print(np.abs(T_x_expectation))
