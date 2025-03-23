@@ -185,10 +185,12 @@ def my_estimator(state,operator):
     return ((state.T.conjugate() @ (operator @ state)) / (state.T.conjugate() @ state)).real
 
 # Calculate the probatility of @state_vector to be in the subspace spanned by the set @subspace
+@jax.jit
 def sbuspace_probability(state_vector, subspace):
     prob = 0
     for v in subspace:
         prob += jnp.abs(state_vector.T.conjugate() @ v) ** 2
+    jax.debug.print("Output value: {y}", y=prob)
     return prob
 
 
