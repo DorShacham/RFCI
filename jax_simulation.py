@@ -1,8 +1,10 @@
 #%%
 from scipy.linalg import expm
 import os
-import jax
-import jax.numpy as np
+from jax import config
+# Enable 64-bit computation
+config.update("jax_enable_x64", True)
+import jax.numpy as jnp
 from  jax.experimental import sparse as jax_sparse
 from  scipy import sparse 
 from mpmath import *
@@ -32,31 +34,31 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
         n = Nx * Ny // q
 
     try:
-        IQH_state = np.load(f'data/states/Nx-{Nx}_Ny-{Ny}_q={q}_magnetic.npy')
+        IQH_state = jnp.load(f'data/states/Nx-{Nx}_Ny-{Ny}_q={q}_magnetic.npy')
         mps = Multi_particle_state(N = 2 * Nx * Ny,n=n)
     except:
         print("Calculting IQH state")
         H_real_space = build_H(Nx,Ny)
-        H_real_space_magnetic = add_magnetic_field_chern(np.array(H_real_space), p, q, Nx, Ny)
+        H_real_space_magnetic = add_magnetic_field_chern(jnp.array(H_real_space), p, q, Nx, Ny)
         IQH_state, mps = create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 1, H_sb = H_real_space_magnetic)
-        np.save(str(f'data/states/Nx-{Nx}_Ny-{Ny}_q={q}_magnetic.npy'),IQH_state)
+        jnp.save(str(f'data/states/Nx-{Nx}_Ny-{Ny}_q={q}_magnetic.npy'),IQH_state)
 
     a = 2 # control the momentum sector on the symmetric state
     state = IQH_state
     T_y_expectation = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=0,Ty=1)
-    if np.abs(np.abs(T_y_expectation) - 1) > 1e-5: # state is not symmetric
+    if jnp.abs(jnp.abs(T_y_expectation) - 1) > 1e-5: # state is not symmetric
         # sym state = phase * (phase ** (-1/3) I + phase ** (-2/3) T + phase ** (-3/3) T^2) state
         phase = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=0,Ty=3)
-        sym_state = np.array(state) * (phase ** (-1/3)) * np.exp(1j * 2 * np.pi / (-3) * a)
+        sym_state = jnp.array(state) * (phase ** (-1/3)) * jnp.exp(1j * 2 * jnp.pi / (-3) * a)
         for i in range(1,q):
-            sym_state += (translation_operator(state,mps,Nx,Ny,Tx=0,Ty=i)) * (phase ** (-(i+1)/3)) * np.exp(1j * 2 * np.pi / (-3) * (i+1) * a)
+            sym_state += (translation_operator(state,mps,Nx,Ny,Tx=0,Ty=i)) * (phase ** (-(i+1)/3)) * jnp.exp(1j * 2 * jnp.pi / (-3) * (i+1) * a)
         sym_state = normalize(sym_state * phase)
         state = sym_state
 
     try:
         H = sparse.load_npz(str(f'data/matrix/H_Nx-{Nx}_Ny-{Ny}.npz'))
         interaction = sparse.load_npz(str(f'data/matrix/interactions_Nx-{Nx}_Ny-{Ny}.npz'))
-        H_many_body =  float(config_list[0]['band_energy']) * (H + (Nx * Ny // 3) * sparse.identity(n = np.shape(H)[0], format='csr'))  + config_list[0]['interaction_strength'] * interaction
+        H_many_body =  float(config_list[0]['band_energy']) * (H + (Nx * Ny // 3) * sparse.identity(n = jnp.shape(H)[0], format='csr'))  + config_list[0]['interaction_strength'] * interaction
     except:
         print("Calculting H_many_body matrix")
         H = build_non_interacting_H(Nx = Nx, Ny = Ny, n = n, multi_process= False)
@@ -65,16 +67,16 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
         interaction = build_interaction(Nx = Nx, Ny = Ny, n = n, multi_process= False)
         sparse.save_npz(str(f'data/matrix/interactions_Nx-{Nx}_Ny-{Ny}.npz'), interaction)
         
-        H_many_body =  float(config_list[0]['band_energy']) * (H + n * sparse.identity(n = np.shape(H)[0], format='csr'))  + config_list[0]['interaction_strength'] * interaction
+        H_many_body =  float(config_list[0]['band_energy']) * (H + n * sparse.identity(n = jnp.shape(H)[0], format='csr'))  + config_list[0]['interaction_strength'] * interaction
         eigenvalues, eigenvectors = eigenvalues, eigenvectors = eigsh(H_many_body, k=4, which='SA')
-        np.savez(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz', a=eigenvectors)
+        jnp.savez(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz', a=eigenvectors)
 
     try:
-        loaded = np.load(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz')
+        loaded = jnp.load(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz')
         eigenvectors = loaded['a']            
     except:
         eigenvalues, eigenvectors = eigenvalues, eigenvectors = eigsh(H_many_body, k=4, which='SA')
-        np.savez(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz', a=eigenvectors)
+        jnp.savez(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz', a=eigenvectors)
     
     H_many_body = jax_sparse.BCOO.from_scipy_sparse(H_many_body)
 

@@ -1,6 +1,11 @@
 #%%
 from functools import partial
 import jax
+from jax import config
+
+# Enable 64-bit computation
+config.update("jax_enable_x64", True)
+import jax.numpy as jnp
 from jax import jacfwd, jacrev
 import jax.numpy as jnp
 from scipy.optimize import minimize
