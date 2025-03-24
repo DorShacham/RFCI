@@ -8,13 +8,13 @@ environment = "HOME=/srv01/technion/dorsh"
 
 
 
-Output =  /storage/ph_lindner/dorsh/RFCI/output/output__$(Process).log
-Error =  /storage/ph_lindner/dorsh/RFCI/output/error__$(Process).log
-Log =  /storage/ph_lindner/dorsh/RFCI/output/condor__$(Process).log
+Output =  /storage/ph_lindner/dorsh/RFCI/output/vqe_output__$(Process).log
+Error =  /storage/ph_lindner/dorsh/RFCI/output/vqe_error__$(Process).log
+Log =  /storage/ph_lindner/dorsh/RFCI/output/vqe_condor__$(Process).log
 Initialdir = /storage/ph_lindner/dorsh/RFCI
 Request_Cpus = 10
 # if you don't define value for memory the default is 2gb it is advisable to specify a value
-Request_Memory = 30GB
+Request_Memory = 5GB
 Queue
 
 
