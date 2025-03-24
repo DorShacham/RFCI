@@ -2,7 +2,7 @@ simulation_type: jax
 
 data:
   name: RFCI
-  Nx: 2
+  Nx: 3
   Ny: 6
   n: 
   id:
@@ -18,7 +18,7 @@ config0:
   overlap_optimization: True
   maxiter: 10000000
   layer_numer: 1
-  flux_gate_true: True
+  flux_gate_true: False
   random_initial_parametrs: True
   loss: 
   # optimizer: 'my_optimizer'

@@ -8,9 +8,9 @@ environment = "HOME=/srv01/technion/dorsh"
 
 
 
-Output =  /storage/ph_lindner/dorsh/RFCI/output/vqe_output__$(Process).log
-Error =  /storage/ph_lindner/dorsh/RFCI/output/vqe_error__$(Process).log
-Log =  /storage/ph_lindner/dorsh/RFCI/output/vqe_condor__$(Process).log
+Output =  /storage/ph_lindner/dorsh/RFCI/output/vqe_output.log
+Error =  /storage/ph_lindner/dorsh/RFCI/output/vqe_error.log
+Log =  /storage/ph_lindner/dorsh/RFCI/output/vqe_condor.log
 Initialdir = /storage/ph_lindner/dorsh/RFCI
 Request_Cpus = 10
 # if you don't define value for memory the default is 2gb it is advisable to specify a value
