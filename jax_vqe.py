@@ -53,7 +53,7 @@ class VQE:
             self.cost_history_dict = config['cost_history_dict']
 
 
-        jax.debug.print("Output value: {y}", y=sbuspace_probability(state_vector = self.initial_state, subspace = self.ground_states))
+        # jax.debug.print("Output value: {y}", y=sbuspace_probability(state_vector = self.initial_state, subspace = self.ground_states))
 
         
 
@@ -193,7 +193,7 @@ def sbuspace_probability(state_vector, subspace):
     prob = 0
     for v in subspace:
         prob += jnp.abs(state_vector.T.conjugate() @ v) ** 2
-    jax.debug.print("Output value: {y}", y=prob)
+    # jax.debug.print("Output value: {y}", y=prob)
     return prob
 
 
