@@ -251,6 +251,13 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x
     
     return H_real_space
 
+# taking the flat band limit of Hamiltonian H by making all eigvenvalues +-1
+def flattan_H(H):
+    eig_val, U = np.linalg.eigh(H)
+    D = np.diag(eig_val) / np.abs(eig_val)
+    H_flat = U @ D @ U.T.conjugate()
+    return H_flat
+
 # Creating an Interger Quantum Hall state on a 2 * Nx * Ny lattice and then extend the lattice by extention_factor
 # in the x direction
 # if H_sb is not None build the state according to it
