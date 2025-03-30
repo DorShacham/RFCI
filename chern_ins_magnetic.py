@@ -138,7 +138,7 @@ def plot_BZ(Nx, Ny, p, q, model = 'basic'):
         H_real_space = add_magnetic_field_square_lattice(np.array(H_real_space),p,q,Nx,Ny,cites_per_uc)
     elif model == 'chern':
         cites_per_uc = 2
-        H_real_space = build_H(Nx,Ny, flat_band=True)
+        H_real_space = build_H(Nx,Ny, flat_band=False)
         H_real_space = add_magnetic_field_chern(np.array(H_real_space),p,q,Nx,Ny)
     
     H_k_space = magnetic_FT(H_real_space, Nx, Ny, q, cites_per_uc)
@@ -186,7 +186,7 @@ def chern_number(Nx,Ny,p,q, model = 'basic'):
 
     elif model == 'chern':
         cites_per_uc = 2
-        H_real_space = build_H(Nx,Ny)
+        H_real_space = build_H(Nx,Ny, flat_band=False)
         H_real_space = add_magnetic_field_chern(np.array(H_real_space), p, q, Nx, Ny)
 
 
@@ -276,11 +276,11 @@ def flux_attch_on_torus_2_compact_state(state, mps, Nx, Ny):
 # eigen_value_test(Nx=24,Ny=24,p=1,q=3, model = 'chern')
 
 #%%
-# Nx = 3 * 3
-# Ny = 6 * 3
-# p = 1
-# q = 3
-# print_band_and_C(Nx,Ny,p,q,model='chern')
+Nx = 3 * 3
+Ny = 6 * 3
+p = -1
+q = 3
+print_band_and_C(Nx,Ny,p,q,model='chern')
 
 # %%
 
