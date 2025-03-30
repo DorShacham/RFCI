@@ -24,16 +24,16 @@ from IQH_state import *
 # All the function for the Transliation Invariant Ansatz
 @jit
 def create_unitary_matrix(params):
-    a, b, c, d, _, _ = params
+    a, b, c, d, _ = params
     hermitian_matrix = jnp.array([[a, b - 1j * c], [b + 1j * c, d]])
     return jax.scipy.linalg.expm(1j * hermitian_matrix)
 
 @jit
 def compute_matrix_values(data, params):
-    a, b, c, d, e, f = params
+    a, b, c, d, e = params
     unitary_matrix = create_unitary_matrix(params)
     phase1 = jnp.exp(1j * e)
-    phase2 = jnp.exp(1j * f)
+    phase2 = 1
 # j, k, l, switch_index = entry
 # @switch_index == 0: U(0,0) / U(1,1) [j,k =0,0 or j,j = 1,1]
 # @switch_index == 1: U(0,1) / U(0,1) * (-1)**(k + parity) [j,k = 0,1 or j,k = 1,0, l = k+ parity]
@@ -83,7 +83,7 @@ class Jax_TV_ansatz:
         # NN = []; N = [(0,0), (0,1), (-1,0), (-1,1)]
         bonds = [(0,0,1), (0,1,1), (-1,0,1), (-1,1,1)] # NN of the model
         self.num_bonds = len(bonds)
-        self.params_per_bond = 6
+        self.params_per_bond = 5
         self.Nx = Nx
         self.Ny = Ny
         
