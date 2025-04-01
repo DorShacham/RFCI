@@ -134,7 +134,7 @@ def exact_diagnolization(Nx, Ny, n = None, H_sb = None, band_energy = 1, interac
     return eigenvalues, eigenvectors
 
 # builds many body H or many without interaction or only interaction term with interaction_strength = 1
-def _build(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff = None, multi_process = False, max_workers = 6, multiprocess_func=None, build = "interacting H"):
+def _build(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, M = 0, naive = False, element_cutoff = None, multi_process = False, max_workers = 6, multiprocess_func=None, build = "interacting H"):
     N = 2 * Nx * Ny
     if n is None:
         n = N // 6
@@ -147,11 +147,13 @@ def _build(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase
     
     if H_sb is None:
         if (phase_shift_x !=0) or (phase_shift_y != 0):
-            H_sb = build_H(Nx=Nx, Ny=Ny, band_energy = band_energy, phi=phi, phase_shift_x = 0, phase_shift_y = 0, element_cutoff=element_cutoff,flat_band=False)
+            H_sb = build_H(Nx=Nx, Ny=Ny, band_energy = band_energy, phi=phi, phase_shift_x = 0, phase_shift_y = 0, M = M, naive = naive, element_cutoff=element_cutoff,flat_band=False)
             from flux_inseration_test import flux_inseration_x, flux_inseration_y
             H_sb = flux_inseration_x(H_real_space=H_sb, flux=phase_shift_x, Nx = Nx, Ny=Ny)
             H_sb = flux_inseration_y(H_real_space=H_sb, flux=phase_shift_y, Nx = Nx, Ny=Ny)
             H_sb = flattan_H(H_sb)
+        else:
+            H_sb = build_H(Nx=Nx, Ny=Ny, band_energy = band_energy, phi=phi, phase_shift_x = 0, phase_shift_y = 0, M = M, naive = naive, element_cutoff=element_cutoff,flat_band=True)
 
     NN = []
     for x in range(Nx):
@@ -219,11 +221,11 @@ def _build(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase
 
     return sparse_matrix
 
-def build_non_interacting_H(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff = None, multi_process = False, max_workers = 6, multiprocess_func=None):
-    return _build(Nx = Nx, Ny = Ny, n = n, H_sb = H_sb, band_energy = band_energy, phi = phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff = element_cutoff, multi_process = multi_process, max_workers = max_workers, multiprocess_func = multiprocess_func, build = "non interacting H")
+def build_non_interacting_H(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, M = 0, naive = False, element_cutoff = None, multi_process = False, max_workers = 6, multiprocess_func=None):
+    return _build(Nx = Nx, Ny = Ny, n = n, H_sb = H_sb, band_energy = band_energy, phi = phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, M = M, naive = naive, element_cutoff = element_cutoff, multi_process = multi_process, max_workers = max_workers, multiprocess_func = multiprocess_func, build = "non interacting H")
 
-def build_interaction(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff = None, multi_process = False, max_workers = 6, multiprocess_func=None):
-    return _build(Nx = Nx, Ny = Ny, n = n, H_sb = H_sb, band_energy = band_energy, phi = phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff = element_cutoff, multi_process = False, max_workers = max_workers, multiprocess_func = multiprocess_func, build = "interaction")
+def build_interaction(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, M = 0, naive = False, element_cutoff = None, multi_process = False, max_workers = 6, multiprocess_func=None):
+    return _build(Nx = Nx, Ny = Ny, n = n, H_sb = H_sb, band_energy = band_energy, phi = phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, M = M, naive = naive, element_cutoff = element_cutoff, multi_process = False, max_workers = max_workers, multiprocess_func = multiprocess_func, build = "interaction")
 
 def build_local_potential(Nx, Ny, n = None, H_sb = None, band_energy = 1, phi =  np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff = None, multi_process = False, max_workers = 6, multiprocess_func=None):
     return _build(Nx = Nx, Ny = Ny, n = n, H_sb = H_sb, band_energy = band_energy, phi = phi, phase_shift_x = phase_shift_x, phase_shift_y = phase_shift_y, element_cutoff = element_cutoff, multi_process = multi_process, max_workers = max_workers, multiprocess_func = multiprocess_func, build = "local potential")
