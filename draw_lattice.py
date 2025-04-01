@@ -62,7 +62,9 @@ Nx = 5
 Ny = 5
 
 H = build_H(Nx,Ny)
-
+# H_transformed = np.where(np.abs(H) < 1e-6, 0, 
+#                 np.where(np.abs(H) > 0.5, 1, 0.5))
+# H = H_transformed
 cx = 0.5
 cy = -0.5
 
