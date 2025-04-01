@@ -14,7 +14,9 @@ if __name__ == "__main__":
     parser.add_argument('--matrix_type', type=str, help='"H" - for non interacting Hamiltonian, "inter" - for interactins, "loc" - for local potential')
     parser.add_argument('--sp', action='store_true', help='Calculate H with different phi y for spectal flow')
     parser.add_argument('--phi', type=float, help='Inserting flux in the y direction')
+    parser.add_argument('-M', type=float, help='Add a mass term which can drive toplogical phase transiation')
     parser.add_argument('--name', type=str, help='Add an odditonal string to the file name')
+    parser.add_argument('--naive', action='store_true', help='Creats real hopping for trival lattice')
     parser.add_argument('-Nx', type=int, help='Nx dimension of the lattice')
     parser.add_argument('-Ny', type=int, help='Ny dimension of the lattice')
     parser.add_argument('-n', type=int, help='number of electrons, if missing will taken to be Nx * Ny /3')
@@ -31,6 +33,14 @@ if __name__ == "__main__":
     n = args.n
     cpu = args.cpu
     spetral_flow = args.sp
+    naive = args.naive
+
+    if args.M is None:
+        M = 0
+    else:
+        M = args.M
+    
+
 
     if save_path is None:
         save_path = './data/matrix'
@@ -83,7 +93,7 @@ if __name__ == "__main__":
         build_H = False
         save_path = './data/matrix/spectral_flow'
         for i,phi_y in enumerate(np.linspace(0,3,72 + 1)):
-            non_interacting_H = build_non_interacting_H(Nx, Ny, n=n,phase_shift_y= phi_y * 2 * np.pi, multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func)
+            non_interacting_H = build_non_interacting_H(Nx, Ny, n=n,phase_shift_y= phi_y * 2 * np.pi, multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func, M = M)
             os.makedirs(save_path, exist_ok=True)
             print(f"Saving H {i} / 73")
             sparse.save_npz(save_path + str(f'/H_Nx-{Nx}_Ny-{Ny}_{i}.npz'), non_interacting_H)
@@ -92,16 +102,19 @@ if __name__ == "__main__":
     if build_H:
         print("Building H")
         if not (phi_y is None):
-            # non_interacting_H = build_non_interacting_H(Nx, Ny, n=n,phase_shift_x=  0 ,phase_shift_y=  2 * np.pi * phi_y , multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func)
-            non_interacting_H = build_non_interacting_H(Nx, Ny, n=n,phase_shift_x=  2 * np.pi * phi_y ,phase_shift_y= 0 , multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func)
-            os.makedirs(save_path, exist_ok=True)
-            print("Saving H")
+            # non_interacting_H = build_non_interacting_H(Nx, Ny, n=n,phase_shift_x=  0 ,phase_shift_y=  2 * np.pi * phi_y , multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func, M = M)
+            non_interacting_H = build_non_interacting_H(Nx, Ny, n=n,phase_shift_x=  2 * np.pi * phi_y ,phase_shift_y= 0 , multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func, M = M)
+        else:
+            non_interacting_H = build_non_interacting_H(Nx, Ny, n=n, multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func, M = M, naive=naive)
+
+        print("Saving H")
+        os.makedirs(save_path, exist_ok=True)
+        if args.name is not None:
             sparse.save_npz(save_path + str(f'/H_Nx-{Nx}_Ny-{Ny}_{args.name}.npz'), non_interacting_H)
         else:
-            non_interacting_H = build_non_interacting_H(Nx, Ny, n=n, multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func)
-            os.makedirs(save_path, exist_ok=True)
-            print("Saving H")
             sparse.save_npz(save_path + str(f'/H_Nx-{Nx}_Ny-{Ny}.npz'), non_interacting_H)
+
+
         
         
 
