@@ -196,7 +196,7 @@ class Multi_particle_state:
         return new_state
 
 # Create the single body Hamiltonian in real space
-def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x = 0, phase_shift_y = 0, element_cutoff= None, flat_band = True):
+def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x = 0, phase_shift_y = 0, naive = False,  element_cutoff= None, flat_band = True):
 # parametrs of the model
     N = Nx * Ny
     # phi = np.pi/4
@@ -221,6 +221,9 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x
         # h2 = np.array([[h11, h12], [np.conjugate(h12), -h11]])
         h2 = np.array([[h11, np.conjugate(h12)], [h12, -h11]])
         return h2
+
+    if naive:
+        flat_band = False
 
     H_k_list = []
     i = 0
@@ -249,6 +252,10 @@ def build_H(Nx = 2, Ny = 2, band_energy = 1, M = 0, phi = np.pi/4, phase_shift_x
     if element_cutoff is not None:
         H_real_space[np.abs(H_real_space) < element_cutoff] = 0
     
+    if naive:
+        H_transformed = np.where(np.abs(H_real_space) < 1e-6, 0, 
+                np.where(np.abs(H_real_space) > 0.5, 1, 10))
+        H_real_space = H_transformed
     return H_real_space
 
 # taking the flat band limit of Hamiltonian H by making all eigvenvalues +-1
