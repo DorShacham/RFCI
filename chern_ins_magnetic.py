@@ -55,8 +55,8 @@ def add_magnetic_field_chern(H_real_space, p, q, Nx, Ny):
 # adding vector potential A = (By,0,0) 
     # sublattice location is (0.5,-0.5)
     cites_per_uc = 2
-    x_pos = lambda x, sublattice: 1 * (x + sublattice / 2) 
-    y_pos = lambda y, sublattice: 1 * (y - sublattice / 2)
+    x_pos = lambda x, sublattice: 1 * (x + 0 * sublattice / 2) 
+    y_pos = lambda y, sublattice: 1 * (y - 0 * sublattice / 2)
     
     H_real_space_magnetic = np.array(H_real_space)
     for x1 in range(Nx):
@@ -177,6 +177,50 @@ def plot_BZ(Nx, Ny, p, q, model = 'basic'):
     plt.show()
     return E
 
+def plot_BZ_original_energy(Nx, Ny, p, q):
+    cites_per_uc = 2
+    H_real_space = build_H(Nx,Ny, flat_band=False)
+    H_flat = (build_H(Nx,Ny, flat_band=True)+ np.eye(2 * Nx * Ny)) / 2
+    H_real_space = add_magnetic_field_chern(np.array(H_real_space),p,q,Nx,Ny)
+    
+    N = Nx * Ny
+    dft_matrix = np.kron(dft(Nx, scale='sqrtn'),(np.kron(dft((Ny // q), scale='sqrtn'),np.eye(cites_per_uc * q))))
+    
+    H_k_space = magnetic_FT(H_real_space, Nx, Ny, q, cites_per_uc)
+
+    Kx = np.linspace(0, 2 * np.pi,num=Nx,endpoint=False)
+    Ky = np.linspace(0, 2 * np.pi / q,num=Ny // q,endpoint=False)
+    
+    E = np.zeros((cites_per_uc * q, Nx, Ny // q), dtype=np.complex128)
+    eig_vec_real_space = np.zeros_like(H_k_space, dtype=np.complex128)
+    for kx in range(Nx):
+        for ky in range(Ny // q):
+            unit_cell = H_k_space[(cites_per_uc * q) * ((Ny // q) * kx + ky) : (cites_per_uc * q) * ((Ny // q) * kx + ky + 1),(cites_per_uc * q) * ((Ny // q) * kx + ky) : (cites_per_uc * q) * ((Ny // q) * kx + ky + 1)]
+            eig_val, eig_vec = np.linalg.eigh(unit_cell)
+            eig_vec_real_space[(cites_per_uc * q) * ((Ny // q) * kx + ky) : (cites_per_uc * q) * ((Ny // q) * kx + ky + 1),(cites_per_uc * q) * ((Ny // q) * kx + ky) : (cites_per_uc * q) * ((Ny // q) * kx + ky + 1)] = eig_vec 
+    
+    eig_vec_real_space = dft_matrix @ eig_vec_real_space
+    original_E = eig_vec_real_space.T.conjugate() @ H_flat @ eig_vec_real_space
+    for kx in range(Nx):
+        for ky in range(Ny // q):
+            unit_cell = original_E[(cites_per_uc * q) * ((Ny // q) * kx + ky) : (cites_per_uc * q) * ((Ny // q) * kx + ky + 1),(cites_per_uc * q) * ((Ny // q) * kx + ky) : (cites_per_uc * q) * ((Ny // q) * kx + ky + 1)]
+            eig_val = np.diag(unit_cell,k=0)
+            E[:,kx,ky] = eig_val
+
+    for r in range(cites_per_uc * q):
+        plt.figure()
+        plt.imshow(E[r,:,:].real, cmap='viridis', interpolation='nearest')
+    # Plot the surface
+        plt.colorbar(label="E_flat")
+        plt.title(f"band# {r}")
+
+        # Customize axes labels
+        # plt.xticks(ticks=np.arange(10), labels=[f"Col {i}" for i in range(10)])
+        # plt.yticks(ticks=np.arange(10), labels=[f"Row {i}" for i in range(10)])
+
+        # Show the plot
+        # plt.show()
+    return E    
 
 def chern_number(Nx,Ny,p,q, model = 'basic'):
     if model == 'basic':
@@ -276,12 +320,15 @@ def flux_attch_on_torus_2_compact_state(state, mps, Nx, Ny):
 # eigen_value_test(Nx=24,Ny=24,p=1,q=3, model = 'chern')
 
 #%%
-Nx = 3 * 3
-Ny = 6 * 3
-p = -1
-q = 3
-print_band_and_C(Nx,Ny,p,q,model='chern')
+# Nx = 3 * 3
+# Ny = 6 * 3
+# p = -1
+# q = 3
+# # print_band_and_C(Nx,Ny,p,q,model='chern')
+# E = plot_BZ_original_energy(Nx,Ny,p,q)
 
+# for i in range(2 * q):
+#     print(np.sum(E[i,:,:].real))
 # %%
 
 #%%
