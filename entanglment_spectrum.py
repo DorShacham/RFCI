@@ -1,5 +1,10 @@
 #%%
-import numpy as np
+# import numpy as np
+from jax import config
+# Enable 64-bit computation
+config.update("jax_enable_x64", True)
+
+from jax import numpy as jnp
 import math
 import matplotlib.pyplot as plt
 from itertools import permutations, combinations, product
@@ -16,7 +21,7 @@ from IQH_state import *
 # in first quantization(!)
 class Multi_particle_state_first_q:
     def __init__(self, N, n):
-        objects = np.arange(N)
+        objects = range(N)
         perms = list((permutations(objects, n)))
         index_2_perm_list = perms
         index = range(len(perms))
@@ -30,7 +35,7 @@ class Multi_particle_state_first_q:
         
 # Creats a vectors of zeros in the size of a multi particle state
     def zero_vector(self):
-        multi_particle_state_vector = np.zeros((len(self.index_2_perm_list)), dtype = complex)
+        multi_particle_state_vector = jnp.zeros((len(self.index_2_perm_list)), dtype = complex)
         return multi_particle_state_vector
 
 # Tranlate index to permutation
@@ -46,7 +51,7 @@ class Multi_particle_state_first_q:
 # with @na electrons
 def build_rho_a_2(state, N, n, na):
     nb = n - na
-    state = np.array(state) / np.sqrt(math.factorial(n))
+    state = jnp.array(state) / jnp.sqrt(math.factorial(n))
     full_length = int(len(state) * math.factorial(n))
     mps_a = Multi_particle_state_first_q(N, na)
     mps_b = Multi_particle_state_first_q(N, nb)
@@ -56,7 +61,7 @@ def build_rho_a_2(state, N, n, na):
     # https://quantumcomputing.stackexchange.com/questions/7099/how-to-find-the-reduced-density-matrix-of-a-four-qubit-system
  
     try:
-        indices_list = np.load(f'data/array/rho_a_indices/N-{N}-n-{n}-na-{na}.npz')
+        indices_list = jnp.load(f'data/array/rho_a_indices/N-{N}-n-{n}-na-{na}.npz')
         row_indices = indices_list['row_indices']
         col_indices = indices_list['col_indices']
         parities = indices_list['parities']
@@ -64,10 +69,10 @@ def build_rho_a_2(state, N, n, na):
     except:
     # Precompute permutations for all indices
         # Map permutations to row and column indices
-        row_indices = np.zeros((full_length), dtype=np.uint32)
-        col_indices = np.zeros((full_length), dtype=np.uint32)
-        parities = np.zeros((full_length), dtype=np.int16)
-        state_permuted_indices = np.zeros((full_length), dtype=np.uint32)
+        row_indices = jnp.zeros((full_length), dtype=np.uint32)
+        col_indices = jnp.zeros((full_length), dtype=np.uint32)
+        parities = jnp.zeros((full_length), dtype=np.int16)
+        state_permuted_indices = jnp.zeros((full_length), dtype=np.uint32)
         f = lambda x: (x[0], mps_full.perm_2_index(x[1]))
 
         for i, perm in tqdm(enumerate(permutations(range(N), n)), total=full_length):
@@ -76,16 +81,16 @@ def build_rho_a_2(state, N, n, na):
 
             parities[i], state_permuted_indices[i] = f(permutation_parity(perm, return_sorted_array=True))
         # row_indices, col_indices = zip(*[(mps_a.perm_2_index(perm[:na]), mps_b.perm_2_index(perm[-nb:])) for perm in permutations(range(N), n)])
-        # row_indices = np.array(row_indices)
-        # col_indices = np.array(col_indices)
+        # row_indices = jnp.array(row_indices)
+        # col_indices = jnp.array(col_indices)
 
         # Compute permutation parities in batch
         # f = lambda x: (x[0], mps_full.perm_2_index(x[1]))
         # parities, state_permuted_indices = zip(*[f(permutation_parity(perm, return_sorted_array=True)) for perm in permutations(range(N), n)])
-        # parities = np.array(parities)
-        # state_permuted_indices = np.array(state_permuted_indices)
+        # parities = jnp.array(parities)
+        # state_permuted_indices = jnp.array(state_permuted_indices)
         
-        np.savez(f'data/array/rho_a_indices/N-{N}-n-{n}-na-{na}.npz',
+        jnp.savez(f'data/array/rho_a_indices/N-{N}-n-{n}-na-{na}.npz',
         row_indices = row_indices,
         col_indices = col_indices,
         parities = parities,
@@ -99,9 +104,10 @@ def build_rho_a_2(state, N, n, na):
     # row_indices = row_indices.reshape((len(row_indices), 1))
     # col_indices = col_indices.reshape((len(col_indices), 1))
     parities = parities.reshape((len(parities),1))
-    C = np.zeros((mps_a.len, mps_b.len, np.shape(state)[1]), dtype=np.complex128)
-    C[row_indices, col_indices,:] = state[state_permuted_indices,:] * (-1) ** parities
-    rho = np.mean(np.array([C[:,:,i] @ C[:,:,i].T.conjugate() for i in range(np.shape(state)[1])]), axis= 0)   
+    C = jnp.empty((mps_a.len, mps_b.len, jnp.shape(state)[1]), dtype=np.complex128)
+    C = C.at[row_indices, col_indices,:].set(state[state_permuted_indices,:] * (-1) ** parities)
+    
+    rho = jnp.mean(np.array([C[:,:,i] @ C[:,:,i].T.conjugate() for i in range(np.shape(state)[1])]), axis= 0)   
     return rho 
 
 
@@ -110,10 +116,10 @@ def build_rho_a_2(state, N, n, na):
 # with @na electrons
 def build_rho_a(state, N, n, na):
     nb = n - na
-    state = np.array(state) / np.sqrt(math.factorial(n))
+    state = jnp.array(state) / jnp.sqrt(math.factorial(n))
     mps = Multi_particle_state_first_q(N, na)
     mps_full = Multi_particle_state(N, n)
-    rho = np.zeros(shape=(mps.len,mps.len), dtype=np.complex128)
+    rho = jnp.zeros(shape=(mps.len,mps.len), dtype=np.complex128)
 
     for row_index in tqdm(range(mps.len)):
         for col_index in range(mps.len):
@@ -144,7 +150,7 @@ def build_rho_a(state, N, n, na):
 # with @na electrons
 def entanglement_spectrum(state, N, n, na):
     rho = build_rho_a_2(state, N, n, na)
-    eigval = np.linalg.eigvalsh(rho)
+    eigval = jnp.linalg.eigvalsh(rho)
     return eigval
 
 # compute the entanglement_entropy of a [second quantization] @state
@@ -153,7 +159,7 @@ def entanglement_spectrum(state, N, n, na):
 def entanglement_entropy(state, N, n, na):
     eigval = entanglement_spectrum(state, N, n, na)
     non_zero_eigval = eigval[np.abs(eigval) > 1e-12]
-    S = - np.sum(non_zero_eigval * np.log(non_zero_eigval))
+    S = - jnp.sum(non_zero_eigval * jnp.log(non_zero_eigval))
     return S
 
 if __name__ == "__main__":
@@ -173,9 +179,9 @@ if __name__ == "__main__":
 # print(rho)
 
 # print("-------------")
-# analytic = np.array([[np.abs(a1)**2 / 2, 0, -a1 * a2.conjugate() / 2],
+# analytic = jnp.array([[np.abs(a1)**2 / 2, 0, -a1 * a2.conjugate() / 2],
 #                     [0,                 1/2,  0],
-#                     [-a1.conjugate()*a2 / 2, 0,   np.abs(a2)**2 / 2]])
+#                     [-a1.conjugate()*a2 / 2, 0,   jnp.abs(a2)**2 / 2]])
 
 # print(analytic)
 
@@ -193,10 +199,10 @@ if __name__ == "__main__":
 
 # # FF_state, mps =  create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 1, H_sb = None)
 # # S_F = entanglement_entropy(state = FF_state, N = N, n = n, na = na)
-# S_F = np.log(math.factorial(n) / math.factorial(na) / math.factorial(n - na))
+# S_F = jnp.log(math.factorial(n) / math.factorial(na) / math.factorial(n - na))
 # print(f"S_F = {S_F}")
 
-# loaded2 = np.load(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz')
+# loaded2 = jnp.load(f'data/states/Nx-{Nx}_Ny-{Ny}_k-4.npz')
 # eigenvectors = loaded2['a']
 # # S_int = entanglement_entropy(state = eigenvectors[:,0], N = N, n = n, na = na)
 # # S_int = entanglement_entropy(state = loaded, N = N, n = n, na = na)
