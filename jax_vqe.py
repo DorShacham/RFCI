@@ -2,6 +2,9 @@
 from functools import partial
 import jax
 from jax import config
+import jax.scipy.optimize
+from qiskit_algorithms.optimizers import SPSA
+
 
 # Enable 64-bit computation
 config.update("jax_enable_x64", True)
@@ -127,7 +130,7 @@ class VQE:
 
 
         if self.config['optimizer'] == 'SPSA':
-            spsa = SPSA(maxiter=300)
+            spsa = SPSA(maxiter=int(1e7))
             res = spsa.minimize(self.cost_func, x0=x0)
         elif self.config['optimizer'] == 'my_optimizer':
             res = my_optimizer(x = x0,cost_func=self.my_cost_func ,eps=1e-8, step_size=1e-3, approx_min=self.approx_min, log= self.log)
@@ -148,7 +151,7 @@ class VQE:
                 options = {
                 'rhobeg': step_size,
                 'ftol': 2.220446049250313e-09,  # Function tolerance
-                'gtol': 1e-08,  # Gradient tolerance
+                'gtol': 1e-06,  # Gradient tolerance
                 # 'eps': 1e-08,  # Step size for numerical approximation
                 'maxiter': self.config['maxiter'],  # Maximum iterations
                 'maxfun': self.config['maxiter'],  # Maximum function evaluations
