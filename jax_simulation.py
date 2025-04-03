@@ -12,7 +12,7 @@ from mpmath import *
 
 from IQH_state import *
 from flux_attch import *
-from jax_vqe import *
+from jax_vqe_2 import *
 from exact_diagnolization import *
 from jax_ansatz import Jax_ansatz
 from chern_ins_magnetic import add_magnetic_field_chern
@@ -112,10 +112,11 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
         
         vqe = VQE(config_dict)
         res = vqe.minimize()
-        vqe.plot()
+        # vqe.plot()
         # calculting initial and final energy
         i_state = state
-        f_state = ansatz.apply_ansatz(params = res.x, state = state)
+        # f_state = ansatz.apply_ansatz(params = res.x, state = state)
+        f_state = ansatz.apply_ansatz(params = res.params, state = state)
 
         initial_energy = my_estimator(i_state,H_many_body)
         finial_energy = my_estimator(f_state,H_many_body)
