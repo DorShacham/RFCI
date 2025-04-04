@@ -43,7 +43,7 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
         IQH_state, mps = create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 1, H_sb = H_real_space_magnetic)
         jnp.save(str(f'data/states/Nx-{Nx}_Ny-{Ny}_q={q}_magnetic.npy'),IQH_state)
 
-    a = 1 # control the momentum sector on the symmetric state
+    a = 2 # control the momentum sector on the symmetric state
     state = IQH_state
     T_y_expectation = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=0,Ty=1)
     if jnp.abs(jnp.abs(T_y_expectation) - 1) > 1e-5: # state is not symmetric
