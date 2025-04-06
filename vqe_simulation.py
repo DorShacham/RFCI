@@ -5,12 +5,7 @@ import multiprocessing
 from argparse import ArgumentParser
 import yaml
 import pickle
-import jax
-from jax import config
 
-# Enable 64-bit computation
-config.update("jax_enable_x64", True)
-import jax.numpy as jnp
 
 
 
@@ -44,6 +39,8 @@ if __name__ == "__main__":
         os.environ["NUMEXPR_NUM_THREADS"] = str(cpu)
         os.environ["OPENBLAS_NUM_THREADS"] = str(cpu)
         os.environ["JAX_NUM_THREADS"] = str(cpu)
+        os.environ["XLA_FLAGS"] = ("--xla_cpu_multi_thread_eigen=false "
+                                   "intra_op_parallelism_threads=1")
         print(f"CPU usage limited to {cpu} threads on Linux.")
     elif platform.system() == "Darwin":
         # macOS-specific behavior (no limitation)
@@ -51,6 +48,14 @@ if __name__ == "__main__":
         os.environ["XLA_FLAGS"] = "--xla_force_host_platform_device_count={}".format(multiprocessing.cpu_count())
     else:
         print("Operating system not recognized. No changes applied.")
+
+
+    import jax
+    from jax import config
+
+    # Enable 64-bit computation
+    config.update("jax_enable_x64", True)
+    import jax.numpy as jnp
 
     from exact_diagnolization import *
     import qiskit_simulation
