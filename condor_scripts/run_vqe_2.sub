@@ -1,6 +1,6 @@
 Universe = vanilla
 Executable = condor_scripts/run_vqe.sh
-Arguments = 5 3 $(Layer) $(Flux)
+Arguments = 5 3 $(Layer) $(Flux) $(Process)
 environment = "HOME=/srv01/technion/dorsh"
 
 # Specify file transfer settings - the setting should ALWAYS be no!!!!

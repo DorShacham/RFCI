@@ -40,7 +40,7 @@ if __name__ == "__main__":
         os.environ["OPENBLAS_NUM_THREADS"] = str(cpu)
         os.environ["JAX_NUM_THREADS"] = str(cpu)
         os.environ["XLA_FLAGS"] = ("--xla_cpu_multi_thread_eigen=false "
-                                   "intra_op_parallelism_threads=1")
+                                   f"intra_op_parallelism_threads={cpu}")
         print(f"CPU usage limited to {cpu} threads on Linux.")
     elif platform.system() == "Darwin":
         # macOS-specific behavior (no limitation)
