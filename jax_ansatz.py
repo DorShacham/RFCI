@@ -17,6 +17,8 @@ import numpy as np
 from tqdm import tqdm
 from flux_attch import *
 from mpmath import *
+from functools import partial
+
 
 
 from IQH_state import *
@@ -238,25 +240,34 @@ class Jax_FA_ansatz:
             cite_number = 2 * Nx * Ny
             state_size = IQH_state_mps.len
             matrix_elements = {}
+
+            # sublattice location is (0.5,-0.5)
+            x_pos = lambda x, sublattice: 1 * (x + sublattice / 2) 
+            y_pos = lambda y, sublattice: 1 * (y - sublattice / 2)
+
+
             for index in range(state_size):
                 state_perm = mps.index_2_perm(index)
                 for cite1 in range(1, len(state_perm)):
                     for cite2 in range(cite1):
                         # determine shortest vector
                         x1,y1,sublattice1 = cite_index_2_cite(state_perm[cite1],Ny)
-                        x2,y2,sublattice2 = cite_index_2_cite(state_perm[cite2],Ny)
+                        x1_pos, y1_pos = x_pos(x1,sublattice1), y_pos(y1,sublattice1)
                         
-                        dist_1 = np.sqrt(((x1 - x2) % Nx)**2 + ((y1 - y2) % Ny)**2)
-                        dist_2 = np.sqrt((-(x1 - x2) % Nx)**2 + ((y1 - y2) % Ny)**2)
-                        dist_3 = np.sqrt(((x1 - x2) % Nx)**2 + (-(y1 - y2) % Ny)**2)
-                        dist_4 = np.sqrt((-(x1 - x2) % Nx)**2 + (-(y1 - y2) % Ny)**2)
+                        x2,y2,sublattice2 = cite_index_2_cite(state_perm[cite2],Ny)
+                        x2_pos, y2_pos = x_pos(x2,sublattice2), y_pos(y2,sublattice2)
+
+                        dist_1 = np.sqrt(((x1_pos - x2_pos) % Nx)**2 + ((y1_pos - y2_pos) % Ny)**2)
+                        dist_2 = np.sqrt((-(x1_pos - x2_pos) % Nx)**2 + ((y1_pos - y2_pos) % Ny)**2)
+                        dist_3 = np.sqrt(((x1_pos - x2_pos) % Nx)**2 + (-(y1_pos - y2_pos) % Ny)**2)
+                        dist_4 = np.sqrt((-(x1_pos - x2_pos) % Nx)**2 + (-(y1_pos - y2_pos) % Ny)**2)
                         dist_list = [dist_1, dist_2, dist_3, dist_4]
                         
                         col_dict = {
-                            0: cite_2_cite_index(x = ((x1 - x2) % Nx), y = ((y1 - y2) % Ny), sublattice = 0, Ny = Ny),
-                            1: cite_2_cite_index(x = (-(x1 - x2) % Nx), y = ((y1 - y2) % Ny), sublattice = 0, Ny = Ny),
-                            2: cite_2_cite_index(x = ((x1 - x2) % Nx), y = (-(y1 - y2) % Ny), sublattice = 0, Ny = Ny),
-                            3: cite_2_cite_index(x = (-(x1 - x2) % Nx), y = (-(y1 - y2) % Ny), sublattice = 0, Ny = Ny)
+                            0: cite_2_cite_index(x = ((x1 - x2) % Nx), y = ((y1 - y2) % Ny), sublattice = (sublattice2 - sublattice1) % 2, Ny = Ny),
+                            1: cite_2_cite_index(x = (-(x1 - x2) % Nx), y = ((y1 - y2) % Ny), sublattice = (sublattice2 - sublattice1) % 2, Ny = Ny),
+                            2: cite_2_cite_index(x = ((x1 - x2) % Nx), y = (-(y1 - y2) % Ny), sublattice = (sublattice2 - sublattice1) % 2, Ny = Ny),
+                            3: cite_2_cite_index(x = (-(x1 - x2) % Nx), y = (-(y1 - y2) % Ny), sublattice = (sublattice2 - sublattice1) % 2, Ny = Ny)
                             }
                         col = col_dict[dist_list.index(min(dist_list))]
                         matrix_elements[(index, col)] = matrix_elements.get((index, col), 0)  + 1
