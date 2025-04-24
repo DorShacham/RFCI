@@ -5,6 +5,7 @@ from itertools import permutations, combinations
 from scipy.linalg import block_diag,dft,expm
 import scipy
 from tqdm import tqdm
+from joblib import Parallel, delayed
 
 from qiskit.quantum_info import SparsePauliOp
 from qiskit.quantum_info import Statevector
@@ -118,26 +119,99 @@ class Multi_particle_state:
 # Create a multi particle state with n electrons and N sites. 
 # @state_array is an np.array of shape (n,N) the first index is the electron index.
     def create(self, state_array):
+        n = self.n
+        if n <= 5:
+            return self.create_V3(state_array)
+        else:
+            return self.create_V2(state_array)
+
+    def create_V2(self, state_array):
         N = self.N
         n = self.n
         assert((n,N) == np.shape(state_array))
-        sites = np.arange(N)
 
         # Generate all ordered permutations of length n
-        perms_array = permutations(sites, n)
+        combs_array = np.array(list(combinations(range(N), n)))
+        permutations_array = np.array(list(permutations(range(n), n)))
+        parity_array = np.array([permutation_parity(perm) for perm in permutations_array])
         multi_particle_state_vector = self.zero_vector()
+        rows = np.arange(n)[:, None]  # shape: (n, 1)
 
-        for perm in perms_array:
-            state_coeff = 1
-            for electron_index in range(n):
-                state_coeff *= state_array[electron_index, perm[electron_index]]
-            
-            parity, soreted_perm = permutation_parity(perm = perm, return_sorted_array = True)
-            state_coeff *= (-1)**parity
-            multi_particle_state_index = self.perm_2_index(soreted_perm)
-            multi_particle_state_vector[multi_particle_state_index] += state_coeff
-
+        for perm in tqdm(permutations_array):
+            permutated_comb_array = combs_array[:,perm]
+            cols = permutated_comb_array.T # shape: (n, num_combinations)
+            selected = state_array[rows, cols]      # advanced indexing
+            multi_particle_state_vector += np.prod(selected, axis=0) * (-1)**permutation_parity(perm)
         return normalize(multi_particle_state_vector)
+
+   # more efficient version for n <= 5 but more memory consuming 
+    def create_V3(self, state_array):
+        N = self.N
+        n = self.n
+        assert((n,N) == np.shape(state_array))
+
+        combs_array = np.array(list(combinations(range(N), n)))  # (num_combinations, n)
+        permutations_array = np.array(list(permutations(range(n), n)))  # (num_permutations, n)
+        parity_array = np.array([permutation_parity(perm) for perm in permutations_array])  # (num_permutations,)
+
+        # Step 1: All permuted combinations
+        permuted_combs = combs_array[:, permutations_array]  # (num_combinations, num_permutations, n)
+        permuted_combs = np.transpose(permuted_combs, (1, 0, 2))  # (num_permutations, num_combinations, n)
+
+        # Step 2: Advanced indexing
+        rows = np.arange(n)[None, None, :]  # shape (1, 1, n)
+        selected = state_array[rows, permuted_combs]  # (num_permutations, num_combinations, n)
+
+        # Step 3: Product along n
+        products = np.prod(selected, axis=-1)  # (num_permutations, num_combinations)
+
+        # Step 4: Apply parity
+        signs = (-1) ** parity_array[:, None]  # (num_permutations, 1)
+        signed_products = products * signs
+
+        # Step 5: Sum over permutations
+        multi_particle_state_vector = np.sum(signed_products, axis=0)  # (num_combinations,)
+        return normalize(multi_particle_state_vector)
+
+    # project the @state on the lower band of the Hamiltonian @H
+    def PLLL(self, state, Nx, Ny):
+        try:
+            projector_matrix = np.load(f'data/matrix/PLLL_matrix_Nx-{Nx}_Ny-{Ny}.npz')['projector_matrix']
+            return normalize(projector_matrix @ (projector_matrix.T.conjugate() @ state))
+        except:
+            # If the projector matrix is not found, we need to calculate it
+            N = self.N
+            n = self.n
+            H = build_H(Nx, Ny)
+            eig_val, eig_vec = np.linalg.eigh(H)
+            eig_vec = eig_vec[:, :N // 2].T
+            projected_state = self.zero_vector()
+
+            def process_perm(perm):
+                projector = self.create(eig_vec[perm, :])
+                return (projector.T.conjugate() @ state) * projector
+
+            perms = list(combinations(range(N // 2), n))
+            results = Parallel(n_jobs=-1)(delayed(process_perm)(perm) for perm in perms)
+            projected_state = sum(results)
+            return normalize(projected_state)
+
+    def create_PLL_matrix(self, Nx,Ny):
+        H = build_H(Nx,Ny)
+        N = self.N
+        n = self.n
+        eig_val, eig_vec = np.linalg.eigh(H)
+        eig_vec = eig_vec[:,: N // 2].T
+        
+        combinations_len = len(list(combinations(range(N // 2), n)))
+        projector_matrix = np.empty((self.len, combinations_len), dtype = np.complex128)
+        # for perm,i  in tqdm(combinations(range(N // 2), n), total=combinations_len):
+        for i, perm  in enumerate(tqdm(combinations(range(N // 2), n), total=combinations_len)):
+            projector = self.create(eig_vec[perm, :])
+            projector_matrix[:, i] = projector
+        np.savez(f"data/matrix/PLLL_matrix_Nx-{Nx}_Ny-{Ny}.npz", projector_matrix = projector_matrix)
+        return projector_matrix
+
 
 # Function that acts as a (non-interacting) many body Hamiltonian bases on a single body Hamiltonian @H_sb on state @multi_particle_state
 # The calculation is taking each unit vector in the multi-particle state, splitting it to single particle state calculating the action of
