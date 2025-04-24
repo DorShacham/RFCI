@@ -5,7 +5,7 @@ from itertools import permutations, combinations
 from scipy.linalg import block_diag,dft,expm
 import scipy
 from tqdm import tqdm
-from joblib import Parallel, delayed
+# from joblib import Parallel, delayed
 
 from qiskit.quantum_info import SparsePauliOp
 from qiskit.quantum_info import Statevector
@@ -180,21 +180,23 @@ class Multi_particle_state:
             return normalize(projector_matrix @ (projector_matrix.T.conjugate() @ state))
         except:
             # If the projector matrix is not found, we need to calculate it
-            N = self.N
-            n = self.n
-            H = build_H(Nx, Ny)
-            eig_val, eig_vec = np.linalg.eigh(H)
-            eig_vec = eig_vec[:, :N // 2].T
-            projected_state = self.zero_vector()
+            # N = self.N
+            # n = self.n
+            # H = build_H(Nx, Ny)
+            # eig_val, eig_vec = np.linalg.eigh(H)
+            # eig_vec = eig_vec[:, :N // 2].T
+            # projected_state = self.zero_vector()
 
-            def process_perm(perm):
-                projector = self.create(eig_vec[perm, :])
-                return (projector.T.conjugate() @ state) * projector
+            # def process_perm(perm):
+            #     projector = self.create(eig_vec[perm, :])
+            #     return (projector.T.conjugate() @ state) * projector
 
-            perms = list(combinations(range(N // 2), n))
-            results = Parallel(n_jobs=-1)(delayed(process_perm)(perm) for perm in perms)
-            projected_state = sum(results)
-            return normalize(projected_state)
+            # perms = list(combinations(range(N // 2), n))
+            # results = Parallel(n_jobs=-1)(delayed(process_perm)(perm) for perm in perms)
+            # projected_state = sum(results)
+            # return normalize(projected_state)
+            projector_matrix = self.create_PLL_matrix(self, Nx,Ny)
+            return normalize(projector_matrix @ (projector_matrix.T.conjugate() @ state))
 
     def create_PLL_matrix(self, Nx,Ny):
         H = build_H(Nx,Ny)
