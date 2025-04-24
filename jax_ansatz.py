@@ -379,12 +379,14 @@ class Jax_FA_ansatz:
 ########
 # A class that unify the complete jax ansatz
 # made of U_ansatz = U_local_after @ U_flux @ U_local_before
+# if PLLL = True in the end project on the lowest landuau level
 
 class Jax_ansatz:
-    def __init__(self,Nx,Ny,n, local_layers_num = 1, flux_gate_true = True):
+    def __init__(self,Nx,Ny,n, local_layers_num = 1, flux_gate_true = True, PLLL = False):
         IQH_state_mps =  Multi_particle_state(2 * Nx * Ny, n)
         self.flux_gate_true = flux_gate_true
-        
+        self.PLLL_true = PLLL
+
         if flux_gate_true:
             self.flux_gate = Jax_FA_ansatz(Nx = Nx, Ny = Ny, IQH_state_mps = IQH_state_mps)
             self.flux_gate_param_num = self.flux_gate.num_parameters()
@@ -392,9 +394,23 @@ class Jax_ansatz:
             self.flux_gate = None
             self.flux_gate_param_num = 0
 
-        self.local_gate = Jax_TV_ansatz(Nx = Nx, Ny = Ny, n = n)
-        self.local_gate_param_num = self.local_gate.num_parameters()
-        self.local_layers_num = local_layers_num
+        
+        if PLLL:
+            try:
+                self.PLLL_matrix  = jnp.load(f'data/matrix/PLLL_matrix_Nx-{Nx}_Ny-{Ny}.npz')['projector_matrix']
+            except:
+                print("Building PLLL matrix")
+                self.PLLL_matrix = IQH_state_mps.create_PLL_matrix(Nx, Ny)
+                np.savez(f'data/matrix/PLLL_matrix_Nx-{Nx}_Ny-{Ny}.npz', projector_matrix=self.PLLL_matrix)
+
+        if local_layers_num > 0:
+            self.local_gate = Jax_TV_ansatz(Nx = Nx, Ny = Ny, n = n)
+            self.local_gate_param_num = self.local_gate.num_parameters()
+            self.local_layers_num = local_layers_num
+        else:
+            self.local_gate = None
+            self.local_gate_param_num = 0
+            self.local_layers_num = 0
     
     # The first flux_gate_param_num is for the flux gate
     # after that local_gate_param_num for the local before gate 
@@ -417,10 +433,17 @@ class Jax_ansatz:
             
         for after_params in local_after:
             state = self.local_gate.apply_ansatz(param_set=jnp.array(after_params), state= state)
+        
+        if self.PLLL_true:
+            state = (self.PLLL_matrix @ (self.PLLL_matrix.T.conjugate() @ state))
+            state = state / (jnp.linalg.norm(state))
+
         return state
 
     def num_parameters(self):
         return (self.flux_gate_param_num + self.local_gate_param_num * 2 * self.local_layers_num)
+
+
 
 #%%
 # import jax.random as random

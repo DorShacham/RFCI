@@ -107,7 +107,7 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
         config_dict['ground_states'] = eigenvectors
 
 
-        ansatz = Jax_ansatz(Nx = Nx, Ny = Ny, n=n, local_layers_num=config_dict['layer_numer'], flux_gate_true=config_dict['flux_gate_true'])
+        ansatz = Jax_ansatz(Nx = Nx, Ny = Ny, n=n, local_layers_num=config_dict['layer_numer'], flux_gate_true=config_dict['flux_gate_true'], PLLL=config_dict['PLLL_true'])
         config_dict['ansatz'] = ansatz
         
         vqe = VQE(config_dict)
