@@ -15,7 +15,7 @@ config0:
   band_energy: 1e3
   interaction_strength: 2
   ground_state_degeneracy: 3
-  overlap_optimization: True
+  overlap_optimization: False
   maxiter: 10000000
   layer_numer: 1
   flux_gate_true: True
