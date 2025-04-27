@@ -15,10 +15,10 @@ config0:
   band_energy: 1e3
   interaction_strength: 2
   ground_state_degeneracy: 3
-  overlap_optimization: False
+  overlap_optimization: True
   maxiter: 10000000
   layer_numer: 1
-  flux_gate_true: True
+  flux_gate_true: False
   PLLL_true: True
   random_initial_parametrs: True
   loss: 
