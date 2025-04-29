@@ -8,6 +8,7 @@ import jax.numpy as jnp
 from  jax.experimental import sparse as jax_sparse
 from  scipy import sparse 
 from mpmath import *
+import pickle
 
 
 from IQH_state import *
@@ -54,6 +55,15 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
             sym_state += (translation_operator(state,mps,Nx,Ny,Tx=0,Ty=i)) * (phase ** (-(i+1)/3)) * jnp.exp(1j * 2 * jnp.pi / (-3) * (i+1) * a)
         sym_state = normalize(sym_state * phase)
         state = sym_state
+
+## delete when finished
+        ansatz = Jax_ansatz(Nx = Nx, Ny = Ny, n=n, local_layers_num=1, flux_gate_true=True, PLLL=False)
+        path = str(f'/Users/dor/Documents/technion/Master/research/code/RFCI/results/vqe_simulation/jax/Nx-5_Ny-3_p--1_q-3/zhzxzfp4/optimization_0/res.pickle')
+        with open(path, 'rb') as file:
+#     # Load the pickled data
+            res = pickle.load(file)
+            params = res.params        
+        # state = ansatz.apply_ansatz(params = params, state = state)
 
     try:
         H = sparse.load_npz(str(f'data/matrix/H_Nx-{Nx}_Ny-{Ny}.npz'))
@@ -106,7 +116,8 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
             
         config_dict['ground_states'] = eigenvectors
 
-
+        if not 'PLLL_true' in config_dict:
+            config_dict['PLLL_true'] = False
         ansatz = Jax_ansatz(Nx = Nx, Ny = Ny, n=n, local_layers_num=config_dict['layer_numer'], flux_gate_true=config_dict['flux_gate_true'], PLLL=config_dict['PLLL_true'])
         config_dict['ansatz'] = ansatz
         
