@@ -468,11 +468,10 @@ def cite_index_2_cite(index, Ny):
     return (x,y,sublattice)
 
 # translate the cite @index = 2 * (Ny * x + y) + sublattice -> z = x + iy
-def cite_index_2_z(index,mps, Ny):
+def cite_index_2_z(index,mps, Ny, sublattice_shift_x = 0, sublattice_shift_y = 0):
     x,y,sublattice = cite_index_2_cite(index,Ny)
-### maybe should use also the sublattice index
 
-    z = (x  + 0 * sublattice) + 1j * y
+    z = (x  + sublattice * sublattice_shift_x) + 1j * (y + sublattice * sublattice_shift_y)
     # z =  y + 1j * (x + 0.2 * sublattice)
     return z
 

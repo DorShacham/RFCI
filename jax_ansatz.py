@@ -6,6 +6,7 @@ import jax
 # Set the number of CPU devices JAX will use
 jax.config.update('jax_platforms', 'cpu')
 jax.config.update('jax_default_matmul_precision', 'float32')
+jax.config.update("jax_enable_x64", True)
 
 # Use all available CPUs
 os.environ['XLA_FLAGS'] = '--xla_force_host_platform_device_count={}'.format(os.cpu_count())
@@ -94,7 +95,7 @@ class Jax_TV_ansatz:
         self.state_size = state_size
         
         try: # trying to load existing matrix
-            loaded = np.load(str(f'data/matrix/ansatz/local_gate_Nx-{Nx}_Ny-{Ny}.npz'))
+            loaded = jnp.load(str(f'data/matrix/ansatz/local_gate_Nx-{Nx}_Ny-{Ny}.npz'))
             self.data_array = jnp.array(loaded['data_array'])
             self.row_indices_array = jnp.array(loaded['row_indices_array'])
             self.col_indices_array = jnp.array(loaded['col_indices_array'])
@@ -158,7 +159,7 @@ class Jax_TV_ansatz:
                         self.row_indices_array = jnp.array(row_indices_list)
                         self.col_indices_array = jnp.array(col_indices_list)
 
-                        np.savez(str(f'data/matrix/ansatz/local_gate_Nx-{Nx}_Ny-{Ny}.npz'), data_array=self.data_array, row_indices_array=self.row_indices_array, col_indices_array=self.col_indices_array)
+                        jnp.savez(str(f'data/matrix/ansatz/local_gate_Nx-{Nx}_Ny-{Ny}.npz'), data_array=self.data_array, row_indices_array=self.row_indices_array, col_indices_array=self.col_indices_array)
 
         
 
@@ -226,7 +227,7 @@ class Jax_FA_ansatz:
         self.mps = IQH_state_mps
 
         try: # try loading exisiting matrix
-            loaded = np.load(str(f'data/matrix/ansatz/phase_matrix_Nx-{Nx}_Ny-{Ny}.npz'))
+            loaded = jnp.load(str(f'data/matrix/ansatz/phase_matrix_Nx-{Nx}_Ny-{Ny}.npz'))
             data = loaded['data']
             indices = loaded['indices']
             shape = tuple(loaded['shape'])
@@ -257,10 +258,10 @@ class Jax_FA_ansatz:
                         x2,y2,sublattice2 = cite_index_2_cite(state_perm[cite2],Ny)
                         x2_pos, y2_pos = x_pos(x2,sublattice2), y_pos(y2,sublattice2)
 
-                        dist_1 = np.sqrt(((x1_pos - x2_pos) % Nx)**2 + ((y1_pos - y2_pos) % Ny)**2)
-                        dist_2 = np.sqrt((-(x1_pos - x2_pos) % Nx)**2 + ((y1_pos - y2_pos) % Ny)**2)
-                        dist_3 = np.sqrt(((x1_pos - x2_pos) % Nx)**2 + (-(y1_pos - y2_pos) % Ny)**2)
-                        dist_4 = np.sqrt((-(x1_pos - x2_pos) % Nx)**2 + (-(y1_pos - y2_pos) % Ny)**2)
+                        dist_1 = jnp.sqrt(((x1_pos - x2_pos) % Nx)**2 + ((y1_pos - y2_pos) % Ny)**2)
+                        dist_2 = jnp.sqrt((-(x1_pos - x2_pos) % Nx)**2 + ((y1_pos - y2_pos) % Ny)**2)
+                        dist_3 = jnp.sqrt(((x1_pos - x2_pos) % Nx)**2 + (-(y1_pos - y2_pos) % Ny)**2)
+                        dist_4 = jnp.sqrt((-(x1_pos - x2_pos) % Nx)**2 + (-(y1_pos - y2_pos) % Ny)**2)
                         dist_list = [dist_1, dist_2, dist_3, dist_4]
                         
                         col_dict = {
@@ -277,7 +278,7 @@ class Jax_FA_ansatz:
             indices = jnp.column_stack((jnp.array(rows), jnp.array(cols)))
             sparse_matrix = sparse.BCOO((values,indices),shape = (state_size, cite_number))
 
-            np.savez(str(f'data/matrix/ansatz/phase_matrix_Nx-{Nx}_Ny-{Ny}.npz'), data=sparse_matrix.data, indices=sparse_matrix.indices, shape=sparse_matrix.shape)
+            jnp.savez(str(f'data/matrix/ansatz/phase_matrix_Nx-{Nx}_Ny-{Ny}.npz'), data=sparse_matrix.data, indices=sparse_matrix.indices, shape=sparse_matrix.shape)
             
         self.phase_structure_matrix = sparse_matrix
 
@@ -318,31 +319,39 @@ class Jax_FA_ansatz:
         Nx = self.Nx
         Ny = self.Ny
         cite_number = 2 * Nx * Ny
-        init_params = np.zeros((cite_number), dtype=jnp.float64)
+        # sublattice location is (0.5,-0.5)
+        x_pos = lambda x, sublattice: 1 * (x + sublattice / 2) 
+        y_pos = lambda y, sublattice: 1 * (y - sublattice / 2)
+        init_params = jnp.zeros((cite_number), dtype=jnp.float64)
 
         for cite in range(cite_number):
             x,y,sublattice = cite_index_2_cite(cite,Ny)
-            dist_1 = np.sqrt((x % Nx)**2 + (y % Ny)**2)
-            dist_2 = np.sqrt((-x % Nx)**2 + (y % Ny)**2)
-            dist_3 = np.sqrt((x % Nx)**2 + (-y % Ny)**2)
-            dist_4 = np.sqrt((-x % Nx)**2 + (-y % Ny)**2)
+            xp = x_pos(x,sublattice)
+            yp = y_pos(y,sublattice)
+            # determine shortest vector 
+            dist_1 = jnp.sqrt((xp % Nx)**2 + (yp % Ny)**2)
+            dist_2 = jnp.sqrt((-xp % Nx)**2 + (yp % Ny)**2)
+            dist_3 = jnp.sqrt((xp % Nx)**2 + (-yp % Ny)**2)
+            dist_4 = jnp.sqrt((-xp % Nx)**2 + (-yp % Ny)**2)
             dist_list = [dist_1, dist_2, dist_3, dist_4]
             
             col_dict = {
-                0: cite_2_cite_index(x = (x % Nx), y = (y % Ny), sublattice = 0, Ny = Ny),
-                1: cite_2_cite_index(x = (-x % Nx), y = (y % Ny), sublattice = 0, Ny = Ny),
-                2: cite_2_cite_index(x = (x % Nx), y = (-y % Ny), sublattice = 0, Ny = Ny),
-                3: cite_2_cite_index(x = (-x % Nx), y = (-y % Ny), sublattice = 0, Ny = Ny)
+                0: cite_2_cite_index(x = (x % Nx), y = (y % Ny), sublattice = sublattice, Ny = Ny),
+                1: cite_2_cite_index(x = (-x % Nx), y = (y % Ny), sublattice = sublattice, Ny = Ny),
+                2: cite_2_cite_index(x = (x % Nx), y = (-y % Ny), sublattice = sublattice, Ny = Ny),
+                3: cite_2_cite_index(x = (-x % Nx), y = (-y % Ny), sublattice = sublattice, Ny = Ny)
                 }
-            shortest_dist_cite = col_dict[dist_list.index(min(dist_list))]
+            shortest_dist_cite = int(col_dict[dist_list.index(min(dist_list))])
 
-            za = cite_index_2_z(shortest_dist_cite, self.mps, self.Ny)
+            za = cite_index_2_z(shortest_dist_cite, self.mps, self.Ny, sublattice_shift_x = 0.5, sublattice_shift_y = -0.5)
             z = (za) / self.Nx
             tau = 1j *self.Ny / self.Nx
-            q = complex(np.exp(1j *jnp.pi * tau))
+            q = complex(jnp.exp(1j *jnp.pi * tau))
             term = jnp.array(complex(jtheta(1,z,q)**2))
             if jnp.abs(term) > 1e-6:
-                init_params[shortest_dist_cite] = float(np.angle(term))
+                # print(shortest_dist_cite)
+                init_params = init_params.at[shortest_dist_cite].set(float(jnp.angle(term)))
+                # print(f"cite: {cite}, cite_index_2_z: {cite_index_2_z(shortest_dist_cite, self.mps, self.Ny, sublattice_shift_x = 0.5, sublattice_shift_y = -0.5)},  term: {term}, init_params: {init_params[shortest_dist_cite]}")
 
         return init_params
 
@@ -401,7 +410,7 @@ class Jax_ansatz:
             except:
                 print("Building PLLL matrix")
                 self.PLLL_matrix = IQH_state_mps.create_PLL_matrix(Nx, Ny)
-                np.savez(f'data/matrix/PLLL_matrix_Nx-{Nx}_Ny-{Ny}.npz', projector_matrix=self.PLLL_matrix)
+                jnp.savez(f'data/matrix/PLLL_matrix_Nx-{Nx}_Ny-{Ny}.npz', projector_matrix=self.PLLL_matrix)
 
         if local_layers_num > 0:
             self.local_gate = Jax_TV_ansatz(Nx = Nx, Ny = Ny, n = n)
