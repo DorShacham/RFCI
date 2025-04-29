@@ -8,7 +8,7 @@ import jax.numpy as jnp
 from  jax.experimental import sparse as jax_sparse
 from  scipy import sparse 
 from mpmath import *
-import pickle
+# import pickle
 
 
 from IQH_state import *
@@ -57,12 +57,12 @@ def vqe_simulation(Nx, Ny, config_list, n = None, p=-1, q=3 , pre_ansatz = None,
         state = sym_state
 
 ## delete when finished
-        ansatz = Jax_ansatz(Nx = Nx, Ny = Ny, n=n, local_layers_num=1, flux_gate_true=True, PLLL=False)
-        path = str(f'/Users/dor/Documents/technion/Master/research/code/RFCI/results/vqe_simulation/jax/Nx-5_Ny-3_p--1_q-3/zhzxzfp4/optimization_0/res.pickle')
-        with open(path, 'rb') as file:
-#     # Load the pickled data
-            res = pickle.load(file)
-            params = res.params        
+        # ansatz = Jax_ansatz(Nx = Nx, Ny = Ny, n=n, local_layers_num=1, flux_gate_true=True, PLLL=False)
+        # path = str(f'/Users/dor/Documents/technion/Master/research/code/RFCI/results/vqe_simulation/jax/Nx-5_Ny-3_p--1_q-3/zhzxzfp4/optimization_0/res.pickle')
+        # with open(path, 'rb') as file:
+    # Load the pickled data
+            # res = pickle.load(file)
+            # params = res.params        
         # state = ansatz.apply_ansatz(params = params, state = state)
 
     try:
