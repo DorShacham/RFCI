@@ -9,7 +9,7 @@ data:
   p: -1
   q: 3 
 
-resarach_question: 'testing overlap with BFGS optimizer'
+resarach_question: 'testing overlap with BFGS optimizer only with flux gate '
 
 config0:
   band_energy: 1e3
@@ -17,8 +17,8 @@ config0:
   ground_state_degeneracy: 3
   overlap_optimization: True
   maxiter: 10000000
-  layer_numer: 1
-  flux_gate_true: False
+  layer_numer: 0
+  flux_gate_true: True
   PLLL_true: True
   random_initial_parametrs: True
   loss: 
