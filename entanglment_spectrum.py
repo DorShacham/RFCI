@@ -46,10 +46,9 @@ class Multi_particle_state_first_q:
     def perm_2_index(self, perm):
         return self.perm_2_index_dict[tuple(perm)]
 
-# Create a reduced density matrix rho_a from a [second quantization] @state
-# of @n electron on @N cites reduced with particle partitioned 
-# with @na electrons
-def build_rho_a_2(state, N, n, na):
+# build the matrix C s.t |state> = \sum_{ij} C_{ij} |i> |j>
+# if a list of states is given return a list of C matrices
+def build_C(state, N, n, na):
     nb = n - na
     state = jnp.array(state) / jnp.sqrt(math.factorial(n))
     full_length = int(len(state) * math.factorial(n))
@@ -98,7 +97,7 @@ def build_rho_a_2(state, N, n, na):
 
     # Construct the matrix C efficiently
     print("Now!")
-    if len(np.shape(state)) == 1: # a single vector:
+    if len(jnp.shape(state)) == 1: # a single vector:
         state = state.reshape((len(state),1)) 
     
     # row_indices = row_indices.reshape((len(row_indices), 1))
@@ -106,52 +105,41 @@ def build_rho_a_2(state, N, n, na):
     parities = parities.reshape((len(parities),1))
     C = jnp.empty((mps_a.len, mps_b.len, jnp.shape(state)[1]), dtype=np.complex128)
     C = C.at[row_indices, col_indices,:].set(state[state_permuted_indices,:] * (-1) ** parities)
-    
-    rho = jnp.mean(np.array([C[:,:,i] @ C[:,:,i].T.conjugate() for i in range(np.shape(state)[1])]), axis= 0)   
-    return rho 
-
+    return C
 
 # Create a reduced density matrix rho_a from a [second quantization] @state
 # of @n electron on @N cites reduced with particle partitioned 
 # with @na electrons
 def build_rho_a(state, N, n, na):
-    nb = n - na
-    state = jnp.array(state) / jnp.sqrt(math.factorial(n))
-    mps = Multi_particle_state_first_q(N, na)
-    mps_full = Multi_particle_state(N, n)
-    rho = jnp.zeros(shape=(mps.len,mps.len), dtype=np.complex128)
-
-    for row_index in tqdm(range(mps.len)):
-        for col_index in range(mps.len):
-            row_perm = mps.index_2_perm(row_index)
-            col_perm = mps.index_2_perm(col_index)
-            
-            # tracing out the last nb = n - na electrons:
-            perm_b_row = set(permutations([x for x in range(N) if x not in row_perm], nb))
-            perm_b_col = set(permutations([x for x in range(N) if x not in col_perm], nb))
-            common_elements = perm_b_row & perm_b_col
-            if len(common_elements) > 0:
-                for perm_b in common_elements:
-
-                    full_row_perm = tuple(list(row_perm) + list(perm_b))
-                    row_parity, row_soreted_perm =  permutation_parity(full_row_perm, return_sorted_array=True)
-                    row_full_index = mps_full.perm_2_index(row_soreted_perm)
-                    
-                    full_col_perm = tuple(list(col_perm) + list(perm_b))
-                    col_parity, col_soreted_perm =  permutation_parity(full_col_perm, return_sorted_array=True)
-                    col_full_index = mps_full.perm_2_index(col_soreted_perm)
-                    rho[row_index, col_index] +=  state[row_full_index] * state[col_full_index].conjugate() * (-1) **  (row_parity + col_parity)
-
-    return rho
+    C = build_C(state, N, n, na)
+    print(jnp.shape(C))
+    rho = jnp.mean(jnp.array([C[:,:,i] @ C[:,:,i].T.conjugate() for i in range(jnp.shape(C)[-1])]), axis= 0)   
+    return rho 
 
 
 # compute the entanglement_spectrum of a [second quantization] @state
 # of @n electron on @N cites reduced with particle partitioned 
 # with @na electrons
 def entanglement_spectrum(state, N, n, na):
-    rho = build_rho_a_2(state, N, n, na)
+    rho = build_rho_a(state, N, n, na)
     eigval = jnp.linalg.eigvalsh(rho)
     return eigval
+
+# compute the entanglement_spectrum of a [second quantization] @state
+# of @n electron on @N cites reduced with particle partitioned 
+# with @na electrons using SVD
+def entanglement_spectrum_svd(state, N, n, na):
+    C = build_C(state, N, n, na)
+    print(jnp.shape(C))
+    print(jnp.shape(state))
+    if len(jnp.shape(state)) == 1: # a single vector:
+        state = state.reshape((len(state),1))
+    eigval_list = []
+    for i in range(jnp.shape(state)[1]):
+        singular_values = (jnp.linalg.svd(C[:,:,i], compute_uv=False, full_matrices=False)) #.reshape((jnp.shape(C)[1],))
+        eigval = jnp.abs(singular_values) ** 2
+        eigval_list.append(jnp.sort(eigval))
+    return jnp.mean(jnp.array(eigval_list), axis=0 )   
 
 # compute the entanglement_entropy of a [second quantization] @state
 # of @n electron on @N cites reduced with particle partitioned 
@@ -171,7 +159,7 @@ if __name__ == "__main__":
 
 # a1 = 1
 # a2 = 2
-# state = normalize(np.array([a1,0,a2]))
+# state = normalize(jnp.array([a1,0,a2]))
 # a1 = state[0]
 # a2 = state[2]
 
@@ -185,8 +173,8 @@ if __name__ == "__main__":
 
 # print(analytic)
 
-# print(np.sum(np.abs(rho - rho.T.conjugate())))
-# print(np.sum(np.abs(rho - analytic)))
+# print(jnp.sum(jnp.abs(rho - rho.T.conjugate())))
+# print(jnp.sum(jnp.abs(rho - analytic)))
 
 
 # #%%
