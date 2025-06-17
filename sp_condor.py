@@ -61,8 +61,8 @@ if __name__ == "__main__":
     plt.plot(phi_list,eigenvalues_list[:,6], "-.", color='blue')
     plt.grid()
 
-    plt.xlabel(r"Flux - $L_y\frac{\Phi}{2\pi}$")
-    plt.ylabel(r"Energy - $E$")
+    plt.xlabel(r"$L_y \Phi / 2\pi$")
+    plt.ylabel(r"$E$")
     # plt.title(f"Spectral flow for {Nx,Ny} lattice \n(first 7 eigenvalues)")
     plt.savefig(f"./results/spectral_flow/Nx-{Nx}_Ny-{Ny}_k=7.jpg")
 
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     plt.plot(phi_list,eigenvalues_list[:,2], "-.", color='red')
     plt.grid()
 
-    plt.xlabel(r"Flux - $L_y\frac{\Phi}{2\pi}$")
-    plt.ylabel(r"Energy - $E$")
+    plt.xlabel(r"$L_y \Phi / 2\pi$")
+    plt.ylabel(r"$E$")
     # plt.title(f"Spectral flow for {Nx,Ny} lattice \n(first 3 eigenvalues)")
     plt.savefig(f"./results/spectral_flow/Nx-{Nx}_Ny-{Ny}_k=3.jpg")
