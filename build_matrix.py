@@ -102,8 +102,8 @@ if __name__ == "__main__":
     if build_H:
         print("Building H")
         if not (phi_y is None):
-            # non_interacting_H = build_non_interacting_H(Nx, Ny, n=n,phase_shift_x=  0 ,phase_shift_y=  2 * np.pi * phi_y , multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func, M = M)
-            non_interacting_H = build_non_interacting_H(Nx, Ny, n=n,phase_shift_x=  2 * np.pi * phi_y ,phase_shift_y= 0 , multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func, M = M)
+            non_interacting_H = build_non_interacting_H(Nx, Ny, n=n,phase_shift_x=  0 ,phase_shift_y=  2 * np.pi * phi_y , multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func, M = M)
+            # non_interacting_H = build_non_interacting_H(Nx, Ny, n=n,phase_shift_x=  2 * np.pi * phi_y ,phase_shift_y= 0 , multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func, M = M)
         else:
             non_interacting_H = build_non_interacting_H(Nx, Ny, n=n, multi_process=multi_process,max_workers=max_workers,multiprocess_func=multiprocess_func, M = M, naive=naive)
 
