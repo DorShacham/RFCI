@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# TARGET_FILE="/storage/ph_lindner/dorsh/RFCI/data/matrix/spectral_flow/H_Nx-3_Ny-6_$1.npz"
+# TARGET_FILE="/storage/ph_lindner/dorsh/RFCI/data/matrix/spectral_flow/H_Nx-5_Ny-3_$1.npz"
 
 # # Check if the file exists
 # if [ -f "$TARGET_FILE" ]; then
@@ -10,7 +10,7 @@
     
 #     source /Local/ph_lindner/anaconda3/bin/activate rfci-env
 #     # Run the Python script
-#     python ~/scripts/RFCI/RFCI/build_matrix.py --matrix_type H -Nx 3 -Ny 6 -cpu 6 \
+#     python ~/scripts/RFCI/RFCI/build_matrix.py --matrix_type H -Nx 5 -Ny 3 -cpu 6 \
 #     --save_path /storage/ph_lindner/dorsh/RFCI/data/matrix/spectral_flow \
 #     --name $1 --phi $2
 
@@ -18,8 +18,13 @@
 # fi
 
 
+
+echo "$TARGET_FILE does not exist. Running script.py..."
+
 source /Local/ph_lindner/anaconda3/bin/activate rfci-env
 # Run the Python script
-python ~/scripts/RFCI/RFCI/build_matrix.py --matrix_type H -Nx 6 -Ny 3 -cpu 6 \
+python ~/scripts/RFCI/RFCI/build_matrix.py --matrix_type H -Nx 2 -Ny 6 -cpu 6 \
 --save_path /storage/ph_lindner/dorsh/RFCI/data/matrix/spectral_flow \
 --name $1 --phi $2
+
+conda deactivate
