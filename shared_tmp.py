@@ -36,7 +36,8 @@ x0 = x0.at[:ansatz.flux_gate.num_parameters()].set(init_flux_params)
 
 v = jnp.array([jnp.array(state),translation_operator(state,mps,Nx,Ny,Tx=0,Ty=1),translation_operator(state,mps,Nx,Ny,Tx=0,Ty=2)])
 
-for a in range(3):
+# for a in range(3):
+for a in [2]:
     state = jnp.load(f'data/states/Nx-{Nx}_Ny-{Ny}_q=3_magnetic.npy')
     print(f"-------------\n\na={a}:")
     if True: # state is not symmetric
