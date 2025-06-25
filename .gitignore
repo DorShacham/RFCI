@@ -19,3 +19,4 @@ results/
 configs/jax/*
 !configs/jax/config_template.yaml
 !configs/jax/config_for_expressiv_test_template.yaml
+numerical_experiments/
