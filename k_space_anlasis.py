@@ -36,7 +36,11 @@ def plot_k_space(Nx,Ny, interaction_strength, k, M = 0):
     N =  Nx * Ny
     n = N // 3
     mps = Multi_particle_state(2 * N, n)
+
+    plt.figure(dpi = 300)
     for i in range(k):
+        if i >= k - 1:
+            plt.figure(dpi = 300)
         state = eigenvectors[:,i]
         k_space_lower_band = project_on_band(state = state, mps = mps, band = -1, H = build_H(Nx,Ny), return_k_occupation=True)
         k_space_upper_band = project_on_band(state = state, mps = mps, band = 1, H = build_H(Nx,Ny), return_k_occupation=True)
@@ -44,40 +48,12 @@ def plot_k_space(Nx,Ny, interaction_strength, k, M = 0):
         print(np.sum(k_space_lower_band))
         print(np.sum(k_space_upper_band))
 
-        plt.figure()
-        plt.plot(range(len(k_space_lower_band)), k_space_lower_band, "*", label = "lower band")
-        plt.plot(range(len(k_space_lower_band)), k_space_upper_band, "*", label = "upper band")
-        plt.grid()
+        plt.plot(range(len(k_space_lower_band)), k_space_lower_band, "*", label = fr"$|\psi_{i}> $lower band")
+        plt.plot(range(len(k_space_lower_band)), k_space_upper_band, "*", label = fr"$|\psi_{i}> $upper band")
         plt.legend()
-        plt.xlabel(r"$k_y + N_y k_x$")
-        plt.ylabel(r"$n(k_x,k_y)$")
-        plt.title(f"interaction_strength = {interaction_strength}, M = {M}")
-        plt.savefig(path + str(f'/n_k-{interaction_strength}_M-{M}_k-{i}.jpg'))
+        plt.xlabel(r"$k_y + N_y k_x$", fontsize=14)
+        plt.ylabel(r"$n(k_x,k_y)$", fontsize=14)
+        plt.grid()
+        # plt.title(f"interaction_strength = {interaction_strength}, M = {M}")
+        plt.savefig(path + str(f'/n_k-{interaction_strength}_M-{M}_k-{i}.pdf'))
 
-#%%
-Nx = 3
-Ny = 3
-interaction_strength = 2
-plot_k_space(Nx = Nx, Ny = Ny, interaction_strength=interaction_strength, k=4, M = 0)
-
-#%%
-Nx = 2
-Ny = 6
-interaction_strength_list = [2,0, 1e-3, 1e-1, 1e1, 1e2, 1e3]
-for interaction_strength in interaction_strength_list:
-    plot_k_space(Nx = Nx, Ny = Ny, interaction_strength=interaction_strength, k=4, M = 0)
-
-
-#%%
-Nx = 2
-Ny = 6
-interaction_strength = 2
-M_list = [0.5, 1, 1.5]
-for M in M_list:
-    plot_k_space(Nx = Nx, Ny = Ny, interaction_strength=interaction_strength, k=4, M = M)
-
-#%%
-Nx = 3
-Ny = 6
-interaction_strength = 2
-plot_k_space(Nx = Nx, Ny = Ny, interaction_strength=interaction_strength, k=4, M = 0)

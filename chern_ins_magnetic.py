@@ -131,14 +131,14 @@ def eigen_value_test(Nx,Ny,p,q, model = 'basic'):
     print(eig_val_magnetic_FT)
     print(np.sum(np.abs(eig_val_original - eig_val_magnetic_FT)))
 
-def plot_BZ(Nx, Ny, p, q, model = 'basic'):
+def plot_BZ(Nx, Ny, p, q, model = 'basic', flat_band=False):
     if model == 'basic':
         cites_per_uc = 1
         H_real_space = build_basic_H(Nx,Ny)
         H_real_space = add_magnetic_field_square_lattice(np.array(H_real_space),p,q,Nx,Ny,cites_per_uc)
     elif model == 'chern':
         cites_per_uc = 2
-        H_real_space = build_H(Nx,Ny, flat_band=False)
+        H_real_space = build_H(Nx,Ny, flat_band=flat_band)
         H_real_space = add_magnetic_field_chern(np.array(H_real_space),p,q,Nx,Ny)
     
     H_k_space = magnetic_FT(H_real_space, Nx, Ny, q, cites_per_uc)
@@ -156,7 +156,7 @@ def plot_BZ(Nx, Ny, p, q, model = 'basic'):
             E[:,kx,ky] = eig_val
 
 
-    fig = plt.figure()
+    fig = plt.figure(dpi=300)
     ax = fig.add_subplot(111, projection='3d')
 
     # Plot the surface
@@ -166,15 +166,32 @@ def plot_BZ(Nx, Ny, p, q, model = 'basic'):
         color = plt.cm.tab10(r)  # Tab10 colormap
         ax.plot_surface(kx, ky, E[r,:,:], color=color)
 
-    ax.view_init(elev=0, azim=90)  # Elevation = 30 degrees, Azimuth = 45 degrees
+    ax.view_init(elev=5, azim=95)  # Elevation = 10 degrees, Azimuth = 120 degrees
         # Labels and title
-    ax.set_xlabel('kx')
-    ax.set_ylabel('ky')
-    ax.set_zlabel('E(kx, ky)')
-    ax.set_title('E(kx, ky)')
+    ax.set_xlabel('kx', fontdict={'fontsize': 14})
+    ax.set_ylabel('ky', fontdict={'fontsize': 14})
+    ax.set_zlabel(r'$E(k_x, k_y)$', fontdict={'fontsize': 14})  # Add labelpad for extra spacing
+    # ax.set_title('E(kx, ky)')
+
+    # ax.set_xlim(-np.pi, np.pi)
+    # ax.set_ylim(-np.pi/3, np.pi/3)
+
+    # Set tick positions and labels
+    xticks = [Kx[0], Kx[Nx//2], Kx[-1]]
+    yticks = [Ky[0], Ky[Ny//(2*q)], Ky[-1]]
+    ax.set_xticks(xticks)
+    ax.set_yticks(yticks)
+    ax.set_zticks([-1, 0, 1])
+    ax.set_xticklabels([r"-$\pi$",  r"$0$", r"$\pi$"])
+    ax.set_yticklabels([r"-$\pi$",  r"$0$", r"$\pi$"])
+    # ax.set_yticklabels([r"-$\frac{\pi}{3}$", r"$0$", r"$\frac{\pi}{3}$"])
+    ax.set_zticklabels([r"$-1$", r"$0$", r"$1$"])
 
     # Show the plot
-    plt.show()
+    plt.tight_layout()  # Adjust layout to prevent clipping
+    # plt.show()
+    plt.savefig("./BZ.pdf", dpi=300, bbox_inches='tight')
+    # plt.savefig("./BZ_magnetic.pdf", dpi=300, bbox_inches='tight')
     return E
 
 def plot_BZ_original_energy(Nx, Ny, p, q):
@@ -293,124 +310,3 @@ def flux_attch_on_torus_2_compact_state(state, mps, Nx, Ny):
     # return normalize(state)
 ## theta function test
 
-
-#%%
-
-# Nx = 4
-# Ny = 3
-# H = build_H(Nx,Ny)
-# H_m = add_magnetic_field_chern(H, p = 1, q = 3, Nx = Nx ,Ny = Ny)
-# phase = (np.angle(H_m) - np.angle(H)) / (2 * np.pi)
-
-# tot_flux = 0
-# cite_A = cite_2_cite_index(0,0,1,Ny=Ny)
-# for x,y,s in [ (0,1,1),(1,1,1), (1,0,1),(0,0,1)]:
-#     cite_B = cite_2_cite_index(x,y,s,Ny=Ny)
-#     tot_flux += phase[cite_B,cite_A]
-#     cite_A = cite_B
-
-# print(tot_flux)
-
-
-# %%
-
-# %%
-# Hofstadter_butterfly(Nx = 10, Ny = 10, q = 100)
-#%%
-# eigen_value_test(Nx=24,Ny=24,p=1,q=3, model = 'chern')
-
-#%%
-# Nx = 3 * 3
-# Ny = 6 * 3
-# p = -1
-# q = 3
-# # print_band_and_C(Nx,Ny,p,q,model='chern')
-# E = plot_BZ_original_energy(Nx,Ny,p,q)
-
-# for i in range(2 * q):
-#     print(np.sum(E[i,:,:].real))
-# %%
-
-#%%
-# # Let us simulate taking a full magnetic chern band state and then increading the field (or turnning it off)
-# # s.t it will be in 1/3 of the non magnetic chern band and add 2 flux per electron 
-# # and calculate the energy
-
-# Nx = 2
-# Ny = 6
-# p = -1
-# q = 3
-
-# # # electron number fill one 'Landau' level
-# n = Nx * Ny // q
-# # n = 4
-# H_real_space = build_H(Nx,Ny,flat_band=True)
-# H_real_space_magnetic = add_magnetic_field_chern(np.array(H_real_space), p, q, Nx, Ny)
-
-# print(np.sum(np.abs(H_real_space_magnetic.T.conjugate() - H_real_space_magnetic)))
-
-
-
-# print("---1---")
-
-# state, mps = create_IQH_in_extendend_lattice(Nx,Ny,n,extention_factor = 1, band_energy = 1, H_sb = H_real_space_magnetic)
-
-# print("---2---")
-
-
-# # state = flux_attch_2_compact_state(np.array(state),mps,Ny)
-# # # state = flux_attch_on_torus_2_compact_state(np.array(state),mps,Nx,Ny)
-
-# # print("---3---")
-
-
-# print_mp_state(state,Nx,Ny,mps)
-
-# T_x_expectation = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=1,Ty=0)
-# T_y_expectation = state.T.conjugate() @ translation_operator(state,mps,Nx,Ny,Tx=0,Ty=3)
-# print(np.abs(T_x_expectation))
-# print(np.abs(T_y_expectation))
-# # print_mp_state(state,Nx,Ny,mps)
-
-# Kx = (np.angle(T_x_expectation)  / (2 * np.pi) * Nx) % Nx % Nx
-# Ky = (np.angle(T_y_expectation)  / (2 * np.pi) * Ny) % Ny % Ny
-# print((Kx,Ky))
-# print(Kx + Nx * Ky)
-
-
-# NN = []
-# for x in range(Nx):
-#     for y in range(Ny):
-#         n1 = cite_2_cite_index(x=x, y=y, sublattice=0, Ny=Ny)
-#         for i in [0,1]:
-#             for j in [0,1]:
-#                 n2 = cite_2_cite_index(x=(x - i) % Nx, y=(y - j) % Ny, sublattice=1, Ny=Ny)
-#                 NN.append((n1,n2))
-
-# # calculting the energy on the interaction with out mangetic field many body H
-# # <psi|H_many_body|psi> / <psi|psi>
-# E = np.matmul(state.T.conjugate(), mps.H_manby_body(H_real_space,state, interaction_strength=1, NN = NN)) / np.linalg.norm(state)**2
-# print(E.real)
-
-
-
-# %%
-
-# Nx = 4
-# Ny = 3
-# n = 1
-
-# H = build_H(Nx,Ny)
-# H = add_magnetic_field_chern(H,p=1,q=3,Nx = Nx, Ny = Ny)
-# mps = Multi_particle_state(2 * Nx * Ny, n)
-
-# Tx = translation_matrix(mps,Nx,Ny,Tx=1,Ty=0)
-# Ty = translation_matrix(mps,Nx,Ny,Tx=0,Ty=3)
-
-# print(np.sum(np.abs(Tx @ H - H @ Tx)))
-# print(np.sum(np.abs(Ty @ H - H @ Ty)))
-# %%
-
-# %%
-
-# %%
