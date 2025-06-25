@@ -19,7 +19,7 @@ config0:
   maxiter: 10000000
   layer_numer: 0
   flux_gate_true: True
-  PLLL_true: True
+  PLLL_true: False
   random_initial_parametrs: True
   loss: 
   # optimizer: 'my_optimizer'
