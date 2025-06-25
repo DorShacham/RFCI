@@ -1,1 +1,0 @@
-{'Nx': 3, 'Ny': 3, 'n': 3, 'band_energy': 1000.0, 'interaction_strength': 2, 'eigenvalues': array([0.16748356, 0.20869646, 0.21025729, 0.36594233])}
