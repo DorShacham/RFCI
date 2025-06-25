@@ -16,3 +16,6 @@ tmpfig_0.jpg
 tmpfig.jpg
 data
 results/
+configs/jax/*
+!configs/jax/config_template.yaml
+!configs/jax/config_for_expressiv_test_template.yaml
